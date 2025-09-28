@@ -4,26 +4,30 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>JulineMart • Staff Requests</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%2308A045'/%3E%3Ctext x='50%' y='54%' text-anchor='middle' font-size='34' font-family='Segoe UI, Roboto' fill='white'%3EJ%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="logo.png">
 <style>
   :root{
-    --jm-primary:#08A045; --jm-dark:#0E141B; --jm-bg:#F6F8FA; --jm-border:#E7EAEE;
+    --jm-primary:#3B0B8F; /* DARK PURPLE */
+    --jm-dark:#0E141B; --jm-bg:#F6F8FA; --jm-border:#E7EAEE;
     --pill-pending:#fff3cd; --pill-pending-b:#ffe69c;
     --pill-approved:#d1e7dd; --pill-approved-b:#a3cfbb;
     --pill-declined:#f8d7da; --pill-declined-b:#f1aeb5;
-    --pill-paid:#cff4fc; --pill-paid-b:#9eeaf9;
+    --pill-paid:#e3d7ff; --pill-paid-b:#c8b5ff;
   }
-  *{box-sizing:border-box} body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--jm-bg);color:#1f2937}
-  header{background:var(--jm-dark);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--jm-bg);color:#1f2937}
+  header{background:var(--jm-dark);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
   .brand{display:flex;gap:10px;align-items:center}
-  .logo{width:28px;height:28px;border-radius:7px;background:var(--jm-primary);display:grid;place-items:center;color:#fff;font-weight:700}
-  .brand h1{font-size:16px;margin:0}.sub{opacity:.75;font-size:12px;margin-top:2px}
+  .brand img{width:28px;height:28px;border-radius:6px;object-fit:contain;background:#fff}
+  .brand h1{font-size:16px;margin:0}
+  .sub{opacity:.75;font-size:12px;margin-top:2px}
   .btn{cursor:pointer;padding:9px 12px;border-radius:9px;border:1px solid var(--jm-border);background:#fff}
   .btn.primary{background:var(--jm-primary);color:#fff;border-color:transparent}
   main{max-width:980px;margin:24px auto;padding:0 16px}
   .card{background:#fff;border:1px solid var(--jm-border);border-radius:12px;padding:16px;margin-bottom:16px}
   label{display:block;font-size:12px;color:#374151;margin-bottom:6px}
-  input,select,textarea{width:100%;padding:10px;border:1px solid #d8dbe0;border-radius:10px;font:inherit}
+  input,select,textarea,button{font:inherit}
+  input,select,textarea{width:100%;padding:10px;border:1px solid #d8dbe0;border-radius:10px}
   textarea{min-height:90px}
   .row{display:flex;gap:12px;flex-wrap:wrap}.row>*{flex:1 1 240px}
   table{width:100%;border-collapse:collapse} th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
@@ -39,13 +43,13 @@
 <body>
 <header>
   <div class="brand">
-    <div class="logo">J</div>
+    <img src="logo.png" alt="JulineMart">
     <div><h1>JulineMart • Staff</h1><div class="sub">Petty Cash & Reimbursements</div></div>
   </div>
   <div>
     <span id="whoami"></span>
-    <button id="btn-signin" class="btn">Sign in</button>
-    <button id="btn-signout" class="btn hidden">Sign out</button>
+    <button id="btn-signin" class="btn" type="button">Sign in</button>
+    <button id="btn-signout" class="btn" type="button" style="display:none">Sign out</button>
   </div>
 </header>
 
@@ -54,12 +58,12 @@
     <h3>Sign in</h3>
     <p>Enter your email to receive a magic link.</p>
     <div class="row"><div><label>Email</label><input type="email" id="email" placeholder="you@julinemart.com"></div></div>
-    <button id="send-link" class="btn primary">Send magic link</button>
+    <button id="send-link" class="btn primary" type="button">Send magic link</button>
     <p id="signin-msg" class="foot-note"></p>
-    <p class="foot-note">Are you an admin? <a class="switch" href="admin.html">Go to Admin</a></p>
+    <p class="foot-note">Admin? <a class="switch" href="admin.html">Go to Admin</a></p>
   </div>
 
-  <section class="card hidden" id="page-new">
+  <section class="card" id="page-new" style="display:none">
     <h3>New Request</h3>
     <div class="row">
       <div><label>Type</label>
@@ -75,14 +79,14 @@
     <textarea id="description" placeholder="What is this for?"></textarea>
     <label>Receipt / Supporting doc (optional, PNG/JPG/PDF)</label>
     <input type="file" id="receipt" accept=".png,.jpg,.jpeg,.pdf">
-    <div style="margin-top:10px"><button id="submit-request" class="btn primary">Submit</button></div>
+    <div style="margin-top:10px"><button id="submit-request" class="btn primary" type="button">Submit</button></div>
     <p id="new-msg" class="foot-note"></p>
   </section>
 
-  <section class="card hidden" id="page-mine">
+  <section class="card" id="page-mine" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <h3>My Requests</h3>
-      <button id="btn-refresh" class="btn">Refresh</button>
+      <button id="btn-refresh" class="btn" type="button">Refresh</button>
     </div>
     <table id="mine-table">
       <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Status</th><th>Receipt</th></tr></thead>
@@ -94,107 +98,124 @@
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script>
-const SUPABASE_URL = "https://hmguraxzebhspednbbav.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const el = id=>document.getElementById(id);
+document.addEventListener('DOMContentLoaded', () => {
+  const SUPABASE_URL = "YOUR_SUPABASE_URL";
+  const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const signinCard = el('signin-card'), pageNew = el('page-new'), pageMine = el('page-mine');
-const whoami = el('whoami'), btnSignin = el('btn-signin'), btnSignout = el('btn-signout');
+  const $ = id => document.getElementById(id);
+  const signinCard = $('signin-card'), pageNew = $('page-new'), pageMine = $('page-mine');
+  const whoami = $('whoami'), btnSignin = $('btn-signin'), btnSignout = $('btn-signout');
 
-let currentUser=null;
+  const show = s => {
+    [signinCard,pageNew,pageMine].forEach(x=> x.style.display='none');
+    s.style.display = 'block';
+  };
 
-function show(section){ [signinCard,pageNew,pageMine].forEach(s=>s.classList.add('hidden')); section.classList.remove('hidden'); }
+  let currentUser = null;
 
-btnSignin.onclick = ()=> show(signinCard);
-btnSignout.onclick = async ()=>{ await sb.auth.signOut(); location.reload(); };
-el('send-link').onclick = async ()=>{
-  const email = el('email').value.trim();
-  if(!email){ el('signin-msg').textContent = "Enter an email."; return; }
-  const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: window.location.href } });
-  el('signin-msg').textContent = error ? error.message : "Check your email for a sign-in link.";
-};
+  btnSignin.addEventListener('click', () => show(signinCard));
+  btnSignout.addEventListener('click', async () => {
+    try{ await sb.auth.signOut(); location.reload(); }catch(e){ alert(e.message); }
+  });
 
-async function init(){
-  const { data:{ session }} = await sb.auth.getSession();
-  currentUser = session?.user ?? null;
-  if(currentUser){
-    whoami.textContent = currentUser.email;
-    btnSignin.classList.add('hidden'); btnSignout.classList.remove('hidden');
-    show(pageNew); loadMine();
-  }else{
-    whoami.textContent = ""; btnSignin.classList.remove('hidden'); btnSignout.classList.add('hidden');
-    show(signinCard);
+  $('send-link').addEventListener('click', async () => {
+    const email = $('email').value.trim();
+    if(!email){ $('signin-msg').textContent = "Enter an email."; return; }
+    const { error } = await sb.auth.signInWithOtp({
+      email,
+      options:{ emailRedirectTo: `${window.location.origin}/staff.html` }
+    });
+    $('signin-msg').textContent = error ? error.message : "Check your email for a sign-in link.";
+  });
+
+  async function init(){
+    const { data:{ session }} = await sb.auth.getSession();
+    currentUser = session?.user ?? null;
+    if(currentUser){
+      whoami.textContent = currentUser.email;
+      btnSignin.style.display='none'; btnSignout.style.display='inline-block';
+      show(pageNew); loadMine();
+    }else{
+      whoami.textContent = "";
+      btnSignin.style.display='inline-block'; btnSignout.style.display='none';
+      show(signinCard);
+    }
   }
-}
-sb.auth.onAuthStateChange(()=>init());
+  sb.auth.onAuthStateChange(()=>init());
 
-async function uploadReceipt(file){
-  if(!file || !currentUser) return null;
-  const ext = file.name.split('.').pop().toLowerCase();
-  const path = `receipts/${currentUser.id}/${crypto.randomUUID()}.${ext}`;
-  const { data, error } = await sb.storage.from('receipts').upload(path, file, { upsert:false, contentType:file.type });
-  if(error){ console.error(error); return null; }
-  return data.path;
-}
-
-el('submit-request').onclick = async ()=>{
-  const kind = el('kind').value;
-  const amount = parseFloat(el('amount').value||'0');
-  const currency = el('currency').value;
-  const needed_by = el('needed_by').value||null;
-  const description = el('description').value.trim();
-  const file = el('receipt').files[0];
-
-  if(!description || !amount){ el('new-msg').textContent = "Please enter description and amount."; return; }
-
-  let receiptPath=null;
-  if(file) receiptPath = await uploadReceipt(file);
-
-  const { data, error } = await sb.from('requests').insert({
-    user_id: currentUser.id, kind, amount, currency, needed_by, description
-  }).select().single();
-  if(error){ el('new-msg').textContent = error.message; return; }
-
-  if(receiptPath){
-    await sb.from('request_notes').insert({ request_id:data.id, author_id: currentUser.id, note:`receipt:${receiptPath}` });
+  async function uploadReceipt(file){
+    if(!file || !currentUser) return null;
+    const ext = file.name.split('.').pop().toLowerCase();
+    const path = `receipts/${currentUser.id}/${crypto.randomUUID()}.${ext}`;
+    const { data, error } = await sb.storage.from('receipts').upload(path, file, { upsert:false, contentType:file.type });
+    if(error){ console.error(error); return null; }
+    return data.path;
   }
-  el('new-msg').textContent = "Request submitted.";
-  el('amount').value=""; el('description').value=""; el('receipt').value=""; el('needed_by').value="";
-  loadMine();
-};
 
-function pill(s){ return `<span class="pill ${s}">${s}</span>`; }
-function fmt(a,c){ return `${c} ${Number(a).toFixed(2)}`; }
+  $('submit-request').addEventListener('click', async () => {
+    try{
+      const kind = $('kind').value;
+      const amount = parseFloat(($('amount').value||'0'));
+      const currency = $('currency').value;
+      const needed_by = $('needed_by').value || null;
+      const description = $('description').value.trim();
+      const file = $('receipt').files[0];
 
-async function signedUrl(path){
-  if(!path) return '';
-  const { data, error } = await sb.storage.from('receipts').createSignedUrl(path, 600);
-  return error ? '' : data.signedUrl;
-}
+      if(!description || !amount){ $('new-msg').textContent = "Please enter description and amount."; return; }
 
-async function loadMine(){
-  const tbody = document.querySelector('#mine-table tbody');
-  tbody.innerHTML = '<tr><td colspan="5">Loading…</td></tr>';
-  const { data, error } = await sb.from('requests').select('*').order('created_at',{ascending:false});
-  if(error){ tbody.innerHTML = `<tr><td colspan="5">${error.message}</td></tr>`; return; }
-  tbody.innerHTML='';
-  for(const r of data){
-    const { data:notes } = await sb.from('request_notes').select('*').eq('request_id', r.id);
-    const rec = (notes||[]).find(n=>n.note.startsWith('receipt:'));
-    let link=''; if(rec){ const url = await signedUrl(rec.note.replace('receipt:','')); if(url) link=`<a href="${url}" target="_blank">View</a>`; }
-    tbody.insertAdjacentHTML('beforeend', `
-      <tr>
-        <td>${new Date(r.created_at).toLocaleDateString()}</td>
-        <td>${r.kind.replace('_',' ')}</td>
-        <td>${fmt(r.amount,r.currency)}</td>
-        <td>${pill(r.status)}</td>
-        <td>${link}</td>
-      </tr>`);
+      let receiptPath = null;
+      if(file) receiptPath = await uploadReceipt(file);
+
+      const { data, error } = await sb.from('requests').insert({
+        user_id: currentUser.id, kind, amount, currency, needed_by, description
+      }).select().single();
+      if(error) throw error;
+
+      if(receiptPath){
+        await sb.from('request_notes').insert({ request_id:data.id, author_id: currentUser.id, note:`receipt:${receiptPath}` });
+      }
+      $('new-msg').textContent = "Request submitted.";
+      $('amount').value=""; $('description').value=""; $('receipt').value=""; $('needed_by').value="";
+      loadMine();
+    }catch(err){
+      $('new-msg').textContent = err.message || String(err);
+    }
+  });
+
+  function pill(s){ return `<span class="pill ${s}">${s}</span>`; }
+  function fmt(a,c){ return `${c} ${Number(a).toFixed(2)}`; }
+
+  async function signedUrl(path){
+    if(!path) return '';
+    const { data, error } = await sb.storage.from('receipts').createSignedUrl(path, 600);
+    return error ? '' : data.signedUrl;
   }
-}
-el('btn-refresh').onclick = loadMine;
-init();
+
+  async function loadMine(){
+    const tbody = document.querySelector('#mine-table tbody');
+    tbody.innerHTML = '<tr><td colspan="5">Loading…</td></tr>';
+    const { data, error } = await sb.from('requests').select('*').order('created_at',{ascending:false});
+    if(error){ tbody.innerHTML = `<tr><td colspan="5">${error.message}</td></tr>`; return; }
+    tbody.innerHTML='';
+    for(const r of data){
+      const { data:notes } = await sb.from('request_notes').select('*').eq('request_id', r.id);
+      const rec = (notes||[]).find(n=>n.note.startsWith('receipt:'));
+      let link=''; if(rec){ const url = await signedUrl(rec.note.replace('receipt:','')); if(url) link=`<a href="${url}" target="_blank">View</a>`; }
+      tbody.insertAdjacentHTML('beforeend', `
+        <tr>
+          <td>${new Date(r.created_at).toLocaleDateString()}</td>
+          <td>${r.kind.replace('_',' ')}</td>
+          <td>${fmt(r.amount,r.currency)}</td>
+          <td>${pill(r.status)}</td>
+          <td>${link}</td>
+        </tr>`);
+    }
+  }
+  $('btn-refresh').addEventListener('click', loadMine);
+
+  init();
+});
 </script>
 </body>
 </html>
