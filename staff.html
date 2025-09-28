@@ -7,36 +7,27 @@
 <link rel="icon" href="logo.png">
 <style>
   :root{--jm-primary:#08A045; --jm-dark:#0E141B; --jm-bg:#F6F8FA; --jm-border:#E7EAEE;
-        --pill-pending:#fff3cd; --pill-pending-b:#ffe69c;
-        --pill-approved:#d1e7dd; --pill-approved-b:#a3cfbb;
-        --pill-declined:#f8d7da; --pill-declined-b:#f1aeb5;
-        --pill-paid:#cff4fc; --pill-paid-b:#9eeaf9;}
-  *{box-sizing:border-box}
-  body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--jm-bg);color:#1f2937}
+        --pill-pending:#fff3cd; --pill-pending-b:#ffe69c; --pill-approved:#d1e7dd; --pill-approved-b:#a3cfbb;
+        --pill-declined:#f8d7da; --pill-declined-b:#f1aeb5; --pill-paid:#cff4fc; --pill-paid-b:#9eeaf9;}
+  *{box-sizing:border-box} body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--jm-bg);color:#1f2937}
   header{background:var(--jm-dark);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
-  .brand{display:flex;gap:10px;align-items:center}
-  .brand img{width:28px;height:28px;border-radius:6px;object-fit:cover}
-  .brand h1{font-size:16px;margin:0}
-  .sub{opacity:.75;font-size:12px;margin-top:2px}
+  .brand{display:flex;gap:10px;align-items:center} .brand img{width:28px;height:28px;border-radius:6px;object-fit:cover}
+  .brand h1{font-size:16px;margin:0} .sub{opacity:.75;font-size:12px;margin-top:2px}
   .btn{cursor:pointer;padding:9px 12px;border-radius:9px;border:1px solid var(--jm-border);background:#fff}
   .btn.primary{background:var(--jm-primary);color:#fff;border-color:transparent}
+  .btn[disabled]{opacity:.6;cursor:not-allowed}
   main{max-width:980px;margin:24px auto;padding:0 16px}
   .card{background:#fff;border:1px solid var(--jm-border);border-radius:12px;padding:16px;margin-bottom:16px}
   label{display:block;font-size:12px;color:#374151;margin-bottom:6px}
   input,select,textarea{width:100%;padding:10px;border:1px solid #d8dbe0;border-radius:10px;font:inherit}
-  textarea{min-height:90px}
-  .row{display:flex;gap:12px;flex-wrap:wrap}
-  .row>*{flex:1 1 240px}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+  textarea{min-height:90px} .row{display:flex;gap:12px;flex-wrap:wrap} .row>*{flex:1 1 240px}
+  table{width:100%;border-collapse:collapse} th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
   .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px}
   .Pending{background:var(--pill-pending);border:1px solid var(--pill-pending-b)}
   .Approved{background:var(--pill-approved);border:1px solid var(--pill-approved-b)}
   .Declined{background:var(--pill-declined);border:1px solid var(--pill-declined-b)}
   .Paid{background:var(--pill-paid);border:1px solid var(--pill-paid-b)}
-  a.switch{color:var(--jm-primary);text-decoration:none}
-  .foot-note{font-size:12px;color:#6b7280}
-  .hidden{display:none}
+  a.switch{color:var(--jm-primary);text-decoration:none} .foot-note{font-size:12px;color:#6b7280} .hidden{display:none}
 </style>
 </head>
 <body>
@@ -55,14 +46,13 @@
 </header>
 
 <main>
-  <!-- LOGIN / REGISTER -->
   <div class="card" id="signin-card">
     <h3>Staff Access</h3>
     <div class="row">
-      <div><label>Email</label><input type="email" id="email" placeholder="you@julinemart.com" autocomplete="username"></div>
-      <div><label>Password</label><input type="password" id="password" placeholder="Enter password" autocomplete="current-password"></div>
+      <div><label>Email</label><input type="email" id="email" placeholder="you@julinemart.com"></div>
+      <div><label>Password</label><input type="password" id="password" placeholder="Enter password"></div>
     </div>
-    <div style="margin-top:10px">
+    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
       <button id="btn-login" class="btn primary">Log in</button>
       <button id="btn-register" class="btn">Register</button>
     </div>
@@ -70,7 +60,6 @@
     <p class="foot-note">Admin? <a class="switch" href="admin.html">Go to Admin</a></p>
   </div>
 
-  <!-- NEW REQUEST -->
   <section class="card hidden" id="page-new">
     <h3>New Request</h3>
     <div class="row">
@@ -95,7 +84,6 @@
     <p id="new-msg" class="foot-note"></p>
   </section>
 
-  <!-- MY REQUESTS -->
   <section class="card hidden" id="page-mine">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <h3>My Requests</h3>
@@ -111,10 +99,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
-/*** PUT YOUR REAL SUPABASE VALUES HERE ***/
 const SUPABASE_URL = "https://hmguraxzebhspednbbav.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o";
-//
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const el=id=>document.getElementById(id);
 
@@ -123,42 +109,35 @@ const whoami=el('whoami'), btnSignout=el('btn-signout');
 let currentUser=null;
 
 function show(section){ [signinCard,pageNew,pageMine].forEach(s=>s.classList.add('hidden')); section.classList.remove('hidden'); }
-
 btnSignout.onclick=async()=>{ await sb.auth.signOut(); location.reload(); };
 
-// login
+function setBusy(button, txt){ if(!button) return; button.dataset.prev = button.textContent; button.textContent = txt; button.disabled = true; }
+function clearBusy(button){ if(!button) return; button.textContent = button.dataset.prev || button.textContent; button.disabled = false; }
+
 el('btn-login').onclick=async()=>{
+  const btn = el('btn-login');
   const email=el('email').value.trim();
   const password=el('password').value.trim();
-  if(!email||!password){ el('signin-msg').textContent="Enter email and password."; return; }
-  const { error } = await sb.auth.signInWithPassword({ email, password });
-  el('signin-msg').textContent = error ? ("Login failed: "+error.message) : "Logged in!";
-  if(!error) location.reload();
+  if(!email||!password){ el('signin-msg').textContent="Enter email & password."; return; }
+  setBusy(btn,"Logging in...");
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  clearBusy(btn);
+  if(error){ el('signin-msg').textContent="Login failed: "+error.message; return; }
+  location.reload();
 };
 
-// register (self-signup). If email confirmations are OFF, we auto-login.
 el('btn-register').onclick=async()=>{
+  const btn = el('btn-register');
   const email=el('email').value.trim();
   const password=el('password').value.trim();
-  if(!email||!password){ el('signin-msg').textContent="Enter email and password."; return; }
+  if(!email||!password){ el('signin-msg').textContent="Enter email & password."; return; }
+  setBusy(btn,"Registering...");
   const { data, error } = await sb.auth.signUp({ email, password });
-  if(error){ el('signin-msg').textContent = "Registration failed: " + error.message; return; }
-
-  // If confirmations are OFF, Supabase returns a session (auto-logged-in) OR allows immediate login.
-  if(data?.session){
-    el('signin-msg').textContent = "Registered and logged in!";
-    location.reload();
-    return;
-  }else{
-    // Try immediate login (works when confirmations are OFF)
-    const { error:loginErr } = await sb.auth.signInWithPassword({ email, password });
-    if(!loginErr){ el('signin-msg').textContent="Registered and logged in!"; location.reload(); return; }
-    // If confirmations are ON, tell the user to verify email.
-    el('signin-msg').textContent = "Registered. Please check your email to verify, then log in.";
-  }
+  clearBusy(btn);
+  if(error){ el('signin-msg').textContent="Registration failed: "+error.message; return; }
+  if(data && data.session){ location.reload(); } else { el('signin-msg').textContent="Registered! Please log in."; }
 };
 
-// init
 async function init(){
   const { data:{ session } } = await sb.auth.getSession();
   currentUser=session?.user??null;
@@ -172,11 +151,10 @@ async function init(){
 }
 sb.auth.onAuthStateChange(()=>init());
 
-// request submission
 async function uploadReceipt(file){
   if(!file||!currentUser) return null;
   const ext=(file.name.split('.').pop()||'bin').toLowerCase();
-  const path=receipts/${currentUser.id}/${crypto.randomUUID()}.${ext};
+  const path=`receipts/${currentUser.id}/${crypto.randomUUID()}.${ext}`;
   const { data,error }=await sb.storage.from('receipts').upload(path,file,{ upsert:false,contentType:file.type||'application/octet-stream' });
   return error?null:data.path;
 }
@@ -189,28 +167,25 @@ el('submit-request').onclick=async()=>{
   let receiptPath=null; if(file) receiptPath=await uploadReceipt(file);
   const { data,error }=await sb.from('requests').insert({ user_id:currentUser.id,kind,amount,currency,needed_by,description }).select().single();
   if(error){ el('new-msg').textContent=error.message; return; }
-  if(receiptPath){ await sb.from('request_notes').insert({ request_id:data.id, author_id:currentUser.id, note:receipt:${receiptPath} }); }
+  if(receiptPath){ await sb.from('request_notes').insert({ request_id:data.id, author_id:currentUser.id, note:`receipt:${receiptPath}` }); }
   el('new-msg').textContent="Request submitted."; el('amount').value=""; el('description').value=""; el('receipt').value=""; el('needed_by').value="";
   loadMine();
 };
 
-function pill(s){ return <span class="pill ${s}">${s}</span>; }
-function fmt(a,c){ return ${c} ${Number(a).toFixed(2)}; }
+function pill(s){ return `<span class="pill ${s}">${s}</span>`; }
+function fmt(a,c){ return `${c} ${Number(a).toFixed(2)}`; }
 
-async function signedUrl(path){
-  if(!path) return ''; const { data,error }=await sb.storage.from('receipts').createSignedUrl(path,600);
-  return error?'':data.signedUrl;
-}
+async function signedUrl(path){ if(!path) return ''; const { data,error }=await sb.storage.from('receipts').createSignedUrl(path,600); return error?'':data.signedUrl; }
 
 async function loadMine(){
   const tbody=document.querySelector('#mine-table tbody'); tbody.innerHTML='<tr><td colspan="5">Loading…</td></tr>';
   const { data,error }=await sb.from('requests').select('*').order('created_at',{ascending:false});
-  if(error){ tbody.innerHTML=<tr><td colspan="5">${error.message}</td></tr>; return; }
+  if(error){ tbody.innerHTML=`<tr><td colspan="5">${error.message}</td></tr>`; return; }
   tbody.innerHTML='';
   for(const r of data){
     let link=''; const { data:notes }=await sb.from('request_notes').select('*').eq('request_id',r.id);
-    const rec=(notes||[]).find(n=>n.note.startsWith('receipt:')); if(rec){ const url=await signedUrl(rec.note.replace('receipt:','')); if(url) link=<a href="${url}" target="_blank">View</a>; }
-    tbody.insertAdjacentHTML('beforeend',<tr><td>${new Date(r.created_at).toLocaleDateString()}</td><td>${r.kind.replace('_',' ')}</td><td>${fmt(r.amount,r.currency)}</td><td>${pill(r.status)}</td><td>${link}</td></tr>);
+    const rec=(notes||[]).find(n=>n.note.startsWith('receipt:')); if(rec){ const url=await signedUrl(rec.note.replace('receipt:','')); if(url) link=`<a href="${url}" target="_blank">View</a>`; }
+    tbody.insertAdjacentHTML('beforeend',`<tr><td>${new Date(r.created_at).toLocaleDateString()}</td><td>${r.kind.replace('_',' ')}</td><td>${fmt(r.amount,r.currency)}</td><td>${pill(r.status)}</td><td>${link}</td></tr>`);
   }
 }
 
