@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>JulineMart • Admin Console</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%2308A045'/%3E%3Ctext x='50%' y='54%' text-anchor='middle' font-size='34' font-family='Segoe UI, Roboto' fill='white'%3EJ%3C/text%3E%3C/svg%3E">
+<style>
+  :root{--jm-primary:#08A045; --jm-dark:#0E141B; --jm-bg:#F6F8FA; --jm-border:#E7EAEE;
+        --pill-pending:#fff3cd; --pill-pending-b:#ffe69c;
+        --pill-approved:#d1e7dd; --pill-approved-b:#a3cfbb;
+        --pill-declined:#f8d7da; --pill-declined-b:#f1aeb5;
+        --pill-paid:#cff4fc; --pill-paid-b:#9eeaf9;}
+  body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--jm-bg);color:#1f2937}
+  header{background:var(--jm-dark);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;gap:10px;align-items:center}
+  .logo{width:28px;height:28px;border-radius:7px;background:var(--jm-primary);display:grid;place-items:center;color:#fff;font-weight:700}
+  .brand h1{font-size:16px;margin:0}.sub{opacity:.75;font-size:12px;margin-top:2px}
+  .btn{cursor:pointer;padding:9px 12px;border-radius:9px;border:1px solid var(--jm-border);background:#fff}
+  .btn.primary{background:var(--jm-primary);color:#fff;border-color:transparent}
+  main{max-width:1100px;margin:24px auto;padding:0 16px}
+  .card{background:#fff;border:1px solid var(--jm-border);border-radius:12px;padding:16px;margin-bottom:16px}
+  table{width:100%;border-collapse:collapse} th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+  .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px}
+  .Pending{background:var(--pill-pending);border:1px solid var(--pill-pending-b)}
+  .Approved{background:var(--pill-approved);border:1px solid var(--pill-approved-b)}
+  .Declined{background:var(--pill-declined);border:1px solid var(--pill-declined-b)}
+  .Paid{background:var(--pill-paid);border:1px solid var(--pill-paid-b)}
+  .noaccess{padding:24px;text-align:center}
+  a.switch{color:var(--jm-primary);text-decoration:none}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+  input,select{padding:8px;border:1px solid #d8dbe0;border-radius:8px;font:inherit}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo">J</div><div><h1>JulineMart • Admin</h1><div class="sub">Petty Cash & Reimbursements</div></div></div>
+  <div><span id="whoami"></span> <button id="btn-signout" class="btn">Sign out</button></div>
+</header>
+
+<main>
+  <div id="no-access" class="card noaccess" style="display:none">
+    <h3>Access denied</h3>
+    <p>This page is for JulineMart admins only.</p>
+    <p><a class="switch" href="staff.html">Go to Staff page</a></p>
+  </div>
+
+  <section id="admin-wrap" class="hidden">
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <h3>All Requests</h3>
+        <div class="filters">
+          <select id="f-status">
+            <option value="">Status: All</option>
+            <option>Pending</option><option>Approved</option><option>Declined</option><option>Paid</option>
+          </select>
+          <select id="f-kind">
+            <option value="">Type: All</option>
+            <option value="petty_cash">Petty Cash</option>
+            <option value="reimbursement">Reimbursement</option>
+          </select>
+          <input type="date" id="f-from" placeholder="From">
+          <input type="date" id="f-to" placeholder="To">
+          <button id="btn-filter" class="btn">Apply</button>
+          <button id="btn-clear" class="btn">Clear</button>
+        </div>
+      </div>
+      <div><button id="btn-export" class="btn primary">Export CSV</button></div>
+    </div>
+
+    <div class="card">
+      <table id="admin-table">
+        <thead><tr><th>Date</th><th>Staff</th><th>Type</th><th>Amount</th><th>Status</th><th>Actions</th><th>Receipt</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p style="margin-top:8px"><a class="switch" href="staff.html">Go to Staff page</a></p>
+    </div>
+  </section>
+</main>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = "YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const el = id=>document.getElementById(id);
+
+const whoami = el('whoami'), wrap = el('admin-wrap'), noAccess = el('no-access');
+el('btn-signout').onclick = async ()=>{ await sb.auth.signOut(); location.href='staff.html'; };
+
+let currentUser=null;
+
+async function init(){
+  const { data:{ session }} = await sb.auth.getSession();
+  currentUser = session?.user ?? null;
+  if(!currentUser){ location.href='staff.html'; return; }
+  whoami.textContent = currentUser.email;
+
+  const { data: prof, error } = await sb.from('profiles').select('*').eq('user_id', currentUser.id).single();
+  let role = prof?.role;
+  if(error && error.code==='PGRST116'){ // no row yet
+    const ins = await sb.from('profiles').insert({ user_id: currentUser.id, role: 'staff' }).select().single();
+    role = ins.data?.role;
+  }
+
+  if(role !== 'admin'){
+    noAccess.style.display = 'block';
+    wrap.classList.add('hidden');
+  }else{
+    noAccess.style.display = 'none';
+    wrap.classList.remove('hidden');
+    loadAdmin();
+  }
+}
+sb.auth.onAuthStateChange(()=>init());
+
+function pill(s){ return `<span class="pill ${s}">${s}</span>`; }
+function fmt(a,c){ return `${c} ${Number(a).toFixed(2)}`; }
+
+async function signedUrl(path){
+  if(!path) return '';
+  const { data, error } = await sb.storage.from('receipts').createSignedUrl(path, 600);
+  return error ? '' : data.signedUrl;
+}
+
+async function fetchRequests(filters={}){
+  let q = sb.from('requests').select('*, profiles:user_id(full_name, user_id)').order('created_at',{ascending:false});
+  if(filters.status) q = q.eq('status', filters.status);
+  if(filters.kind) q = q.eq('kind', filters.kind);
+  if(filters.from) q = q.gte('created_at', filters.from + 'T00:00:00Z');
+  if(filters.to) q = q.lte('created_at', filters.to + 'T23:59:59Z');
+  const { data, error } = await q;
+  if(error) throw error;
+  return data;
+}
+
+async function loadAdmin(filters={}){
+  const tbody = document.querySelector('#admin-table tbody');
+  tbody.innerHTML = '<tr><td colspan="7">Loading…</td></tr>';
+  try{
+    const data = await fetchRequests(filters);
+    tbody.innerHTML = '';
+    for(const r of data){
+      const name = r.profiles?.full_name || (r.user_id||'').slice(0,8);
+      const { data:notes } = await sb.from('request_notes').select('*').eq('request_id', r.id);
+      const rec = (notes||[]).find(n=>n.note.startsWith('receipt:'));
+      let link=''; if(rec){ const url = await signedUrl(rec.note.replace('receipt:','')); if(url) link=`<a href="${url}" target="_blank">View</a>`; }
+      tbody.insertAdjacentHTML('beforeend', `
+        <tr>
+          <td>${new Date(r.created_at).toLocaleDateString()}</td>
+          <td>${name}</td>
+          <td>${r.kind.replace('_',' ')}</td>
+          <td>${fmt(r.amount,r.currency)}</td>
+          <td>${pill(r.status)}</td>
+          <td>
+            <button class="btn" data-act="approve" data-id="${r.id}">Approve</button>
+            <button class="btn" data-act="decline" data-id="${r.id}">Decline</button>
+            <button class="btn" data-act="pay" data-id="${r.id}">Mark Paid</button>
+          </td>
+          <td>${link}</td>
+        </tr>`);
+    }
+    document.querySelectorAll('[data-act]').forEach(b=>b.onclick = onAdminAction);
+  }catch(err){
+    tbody.innerHTML = `<tr><td colspan="7">${err.message}</td></tr>`;
+  }
+}
+
+async function onAdminAction(e){
+  const id = e.target.dataset.id;
+  const act = e.target.dataset.act;
+  if(act==='approve' || act==='decline'){
+    const status = act==='approve' ? 'Approved' : 'Declined';
+    await sb.from('requests').update({ status }).eq('id', id);
+    await sb.from('request_notes').insert({ request_id:id, author_id: currentUser.id, note:`Status -> ${status}` });
+    loadAdmin(readFilters());
+  }else if(act==='pay'){
+    const method = prompt('Payment method (e.g., Transfer, Cash, PayPal):','Transfer'); if(method===null) return;
+    const reference = prompt('Reference / Transaction ID:','');
+    await sb.from('payouts').insert({ request_id:id, paid_by: currentUser.id, method, reference });
+    await sb.from('requests').update({ status:'Paid' }).eq('id', id);
+    await sb.from('request_notes').insert({ request_id:id, author_id: currentUser.id, note:`Status -> Paid (${method} ${reference||''})` });
+    loadAdmin(readFilters());
+  }
+}
+
+function readFilters(){
+  return {
+    status: el('f-status').value || null,
+    kind: el('f-kind').value || null,
+    from: el('f-from').value || null,
+    to: el('f-to').value || null
+  };
+}
+el('btn-filter').onclick = ()=> loadAdmin(readFilters());
+el('btn-clear').onclick = ()=>{
+  el('f-status').value=''; el('f-kind').value=''; el('f-from').value=''; el('f-to').value='';
+  loadAdmin({});
+};
+el('btn-export').onclick = async ()=>{
+  const { data, error } = await sb.from('requests').select('*').order('created_at',{ascending:false});
+  if(error){ alert(error.message); return; }
+  const rows = [['created_at','user_id','kind','amount','currency','needed_by','status','updated_at','id']];
+  data.forEach(r=>rows.push([r.created_at,r.user_id,r.kind,r.amount,r.currency,r.needed_by||'',r.status,r.updated_at,r.id]));
+  const csv = rows.map(r=> r.map(x=>`"${String(x).replaceAll('"','""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='julinemart_requests.csv'; a.click();
+  URL.revokeObjectURL(url);
+};
+
+init();
+</script>
+</body>
+</html>
