@@ -59,8 +59,8 @@
   <div class="card" id="signin-card">
     <h3>Staff Access</h3>
     <div class="row">
-      <div><label>Email</label><input type="email" id="email" placeholder="you@julinemart.com"></div>
-      <div><label>Password</label><input type="password" id="password" placeholder="Enter password"></div>
+      <div><label>Email</label><input type="email" id="email" placeholder="you@julinemart.com" autocomplete="username"></div>
+      <div><label>Password</label><input type="password" id="password" placeholder="Enter password" autocomplete="current-password"></div>
     </div>
     <div style="margin-top:10px">
       <button id="btn-login" class="btn primary">Log in</button>
@@ -111,8 +111,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
-const SUPABASE_URL = "https://hmguraxzebhspednbbav.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o";
+/*** PUT YOUR REAL SUPABASE VALUES HERE ***/
+const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR-ANON-KEY";
+//
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const el=id=>document.getElementById(id);
 
@@ -128,17 +130,32 @@ btnSignout.onclick=async()=>{ await sb.auth.signOut(); location.reload(); };
 el('btn-login').onclick=async()=>{
   const email=el('email').value.trim();
   const password=el('password').value.trim();
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
-  el('signin-msg').textContent = error ? "Login failed: "+error.message : "Logged in!";
+  if(!email||!password){ el('signin-msg').textContent="Enter email and password."; return; }
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  el('signin-msg').textContent = error ? ("Login failed: "+error.message) : "Logged in!";
   if(!error) location.reload();
 };
 
-// register
+// register (self-signup). If email confirmations are OFF, we auto-login.
 el('btn-register').onclick=async()=>{
   const email=el('email').value.trim();
   const password=el('password').value.trim();
+  if(!email||!password){ el('signin-msg').textContent="Enter email and password."; return; }
   const { data, error } = await sb.auth.signUp({ email, password });
-  el('signin-msg').textContent = error ? "Registration failed: "+error.message : "Registered! Please log in.";
+  if(error){ el('signin-msg').textContent = "Registration failed: " + error.message; return; }
+
+  // If confirmations are OFF, Supabase returns a session (auto-logged-in) OR allows immediate login.
+  if(data?.session){
+    el('signin-msg').textContent = "Registered and logged in!";
+    location.reload();
+    return;
+  }else{
+    // Try immediate login (works when confirmations are OFF)
+    const { error:loginErr } = await sb.auth.signInWithPassword({ email, password });
+    if(!loginErr){ el('signin-msg').textContent="Registered and logged in!"; location.reload(); return; }
+    // If confirmations are ON, tell the user to verify email.
+    el('signin-msg').textContent = "Registered. Please check your email to verify, then log in.";
+  }
 };
 
 // init
@@ -159,7 +176,7 @@ sb.auth.onAuthStateChange(()=>init());
 async function uploadReceipt(file){
   if(!file||!currentUser) return null;
   const ext=(file.name.split('.').pop()||'bin').toLowerCase();
-  const path=`receipts/${currentUser.id}/${crypto.randomUUID()}.${ext}`;
+  const path=receipts/${currentUser.id}/${crypto.randomUUID()}.${ext};
   const { data,error }=await sb.storage.from('receipts').upload(path,file,{ upsert:false,contentType:file.type||'application/octet-stream' });
   return error?null:data.path;
 }
@@ -172,13 +189,13 @@ el('submit-request').onclick=async()=>{
   let receiptPath=null; if(file) receiptPath=await uploadReceipt(file);
   const { data,error }=await sb.from('requests').insert({ user_id:currentUser.id,kind,amount,currency,needed_by,description }).select().single();
   if(error){ el('new-msg').textContent=error.message; return; }
-  if(receiptPath){ await sb.from('request_notes').insert({ request_id:data.id, author_id:currentUser.id, note:`receipt:${receiptPath}` }); }
+  if(receiptPath){ await sb.from('request_notes').insert({ request_id:data.id, author_id:currentUser.id, note:receipt:${receiptPath} }); }
   el('new-msg').textContent="Request submitted."; el('amount').value=""; el('description').value=""; el('receipt').value=""; el('needed_by').value="";
   loadMine();
 };
 
-function pill(s){ return `<span class="pill ${s}">${s}</span>`; }
-function fmt(a,c){ return `${c} ${Number(a).toFixed(2)}`; }
+function pill(s){ return <span class="pill ${s}">${s}</span>; }
+function fmt(a,c){ return ${c} ${Number(a).toFixed(2)}; }
 
 async function signedUrl(path){
   if(!path) return ''; const { data,error }=await sb.storage.from('receipts').createSignedUrl(path,600);
@@ -188,12 +205,12 @@ async function signedUrl(path){
 async function loadMine(){
   const tbody=document.querySelector('#mine-table tbody'); tbody.innerHTML='<tr><td colspan="5">Loading…</td></tr>';
   const { data,error }=await sb.from('requests').select('*').order('created_at',{ascending:false});
-  if(error){ tbody.innerHTML=`<tr><td colspan="5">${error.message}</td></tr>`; return; }
+  if(error){ tbody.innerHTML=<tr><td colspan="5">${error.message}</td></tr>; return; }
   tbody.innerHTML='';
   for(const r of data){
     let link=''; const { data:notes }=await sb.from('request_notes').select('*').eq('request_id',r.id);
-    const rec=(notes||[]).find(n=>n.note.startsWith('receipt:')); if(rec){ const url=await signedUrl(rec.note.replace('receipt:','')); if(url) link=`<a href="${url}" target="_blank">View</a>`; }
-    tbody.insertAdjacentHTML('beforeend',`<tr><td>${new Date(r.created_at).toLocaleDateString()}</td><td>${r.kind.replace('_',' ')}</td><td>${fmt(r.amount,r.currency)}</td><td>${pill(r.status)}</td><td>${link}</td></tr>`);
+    const rec=(notes||[]).find(n=>n.note.startsWith('receipt:')); if(rec){ const url=await signedUrl(rec.note.replace('receipt:','')); if(url) link=<a href="${url}" target="_blank">View</a>; }
+    tbody.insertAdjacentHTML('beforeend',<tr><td>${new Date(r.created_at).toLocaleDateString()}</td><td>${r.kind.replace('_',' ')}</td><td>${fmt(r.amount,r.currency)}</td><td>${pill(r.status)}</td><td>${link}</td></tr>);
   }
 }
 
