@@ -9,7 +9,7 @@
   :root{--jm-primary:#08A045;--jm-dark:#0E141B;--jm-border:#E7EAEE;}
   *{box-sizing:border-box}
   body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-  header{background:#0E141B;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+  header{background:#0E141B;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
   .brand{display:flex;gap:10px;align-items:center}
   .brand img{width:28px;height:28px;border-radius:6px}
   .btn{cursor:pointer;padding:8px 10px;border-radius:8px;border:1px solid var(--jm-border);background:#fff}
@@ -27,15 +27,14 @@
   .Approved{background:#d1e7dd;border:1px solid #a3cfbb}
   .Declined{background:#f8d7da;border:1px solid #f1aeb5}
   .Paid{background:#cff4fc;border:1px solid #9eeaf9}
-  .hidden{display:none !important}
+  .hidden{display:none !important} /* make hide unbreakable */
   #paid-totals{font-size:14px;background:#f6f8fa;border:1px solid #e7eaee;padding:6px 10px;border-radius:8px}
 </style>
 </head>
 <body>
 <header>
   <div class="brand">
-    <img src="logo.png" alt="">
-    <b>JulineMart • Admin</b>
+    <img src="logo.png" alt=""><b>JulineMart • Admin</b>
   </div>
   <div>
     <span id="whoami"></span>
@@ -44,7 +43,7 @@
 </header>
 
 <main>
-  <!-- Login -->
+  <!-- Login (shown by default) -->
   <section id="auth" class="card">
     <h3>Admin sign-in</h3>
     <div class="row">
@@ -58,7 +57,7 @@
     <p id="auth-msg" style="color:#c00"></p>
   </section>
 
-  <!-- Filters + totals -->
+  <!-- Filters + totals (hidden until admin session) -->
   <section id="admin-top" class="card hidden" style="display:flex;justify-content:space-between;align-items:center">
     <div>
       <h3 style="margin:0">All Requests</h3>
@@ -77,7 +76,7 @@
     </div>
   </section>
 
-  <!-- Table -->
+  <!-- Table (hidden until admin session) -->
   <section id="admin-table-wrap" class="card hidden">
     <table id="admin-table">
       <thead><tr><th>Date</th><th>Staff</th><th>Type</th><th>Description</th><th>Amount</th><th>Status</th><th>Action</th><th>Receipt</th></tr></thead>
@@ -87,24 +86,21 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="totals.js"></script>
 <script>
-/* ========= Inline totals helper (so it never crashes) ========= */
-function jmSummarizePaidTotals(rows){
-  const totals={};
-  for(const r of rows||[]){ const cur=(String(r?.currency??'').trim()||'UNK'); const amt=Number(r?.amount??0)||0; totals[cur]=(totals[cur]||0)+amt; }
-  return totals;
-}
-function jmFormatTotalsLabel(totals){
-  const entries=Object.entries(totals||{});
-  if(!entries.length) return 'Totals: 0';
-  return 'Totals: ' + entries.map(([c,s])=>`${c} ${s.toFixed(2)}`).join(' • ');
-}
-/* ============================================================= */
-
 const sb = supabase.createClient(
   "https://hmguraxzebhspednbbav.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o"
 );
+
+/* pull helpers from totals.js, but don’t crash if file missing */
+const JT = window.JMTotals || { 
+  summarizePaidTotals: rows => (rows||[]).reduce((m,r)=>{const c=(String(r?.currency??'').trim()||'UNK'); const a=Number(r?.amount??0)||0; m[c]=(m[c]||0)+a; return m;},{}),
+  formatPaidTotalsLabel: totals => {
+    const e = Object.entries(totals||{});
+    return e.length ? 'Totals: '+e.map(([c,s])=>`${c} ${s.toFixed(2)}`).join(' • ') : 'Totals: 0';
+  }
+};
 
 const el=id=>document.getElementById(id);
 const UI={
@@ -115,7 +111,7 @@ const UI={
 };
 let me=null;
 
-/* start fully hidden */
+/* ensure hidden at start */
 UI.top.classList.add('hidden'); UI.wrap.classList.add('hidden'); UI.out.classList.add('hidden');
 
 function showAdminUI(show){
@@ -125,46 +121,48 @@ function showAdminUI(show){
   UI.out.classList.toggle('hidden', !show);
 }
 
-/* ---- init/auth ---- */
+/* ========= Auth / init ========= */
 async function init(){
-  const { data:{session} } = await sb.auth.getSession();
-  me=session?.user||null;
+  const { data:{ session } } = await sb.auth.getSession();
+  me = session?.user || null;
 
   if(!me){ UI.who.textContent=''; showAdminUI(false); return; }
 
-  UI.who.textContent=me.email;
-
-  const { data:prof } = await sb.from('profiles').select('role').eq('user_id',me.id).maybeSingle();
-  if((prof?.role||'staff')!=='admin'){
-    UI.msg.textContent='Access denied (not admin).';
+  UI.who.textContent = me.email;
+  const { data: prof } = await sb.from('profiles').select('role').eq('user_id', me.id).maybeSingle();
+  if((prof?.role || 'staff') !== 'admin'){
+    UI.msg.textContent = 'Access denied (not admin).';
     showAdminUI(false);
     await sb.auth.signOut();
     return;
   }
+
   showAdminUI(true);
   await load(); calcTotals();
 }
-sb.auth.onAuthStateChange(init);  // attach before anything else
+
+sb.auth.onAuthStateChange(() => init());  // attach early
 init();
 
-/* ---- login / logout ---- */
+/* login */
 UI.login.onclick = async ()=>{
   UI.msg.textContent='';
-  const email=el('email').value.trim();
-  const pw=el('password').value.trim();
-  if(!email||!pw){ UI.msg.textContent='Enter email & password.'; return; }
+  const email = el('email').value.trim();
+  const pw = el('password').value.trim();
+  if(!email || !pw){ UI.msg.textContent='Enter email & password.'; return; }
   const { error } = await sb.auth.signInWithPassword({ email, password: pw });
-  if(error){ UI.msg.textContent=error.message; return; }
-  // onAuthStateChange will flip the UI
+  if(error){ UI.msg.textContent = error.message; return; }
+  // onAuthStateChange will call init() and show admin UI
 };
 
+/* sign out */
 UI.out.onclick = async ()=>{
   await sb.auth.signOut();
   showAdminUI(false);
-  location.href='staff.html';
+  location.href = 'staff.html';
 };
 
-/* ---- helpers ---- */
+/* ========= Helpers ========= */
 function pill(s){return `<span class="pill ${s}">${s}</span>`;}
 function fmt(a,c){return `${c} ${Number(a||0).toFixed(2)}`;}
 async function signedUrl(path){ if(!path) return ''; const {data}=await sb.storage.from('receipts').createSignedUrl(path,600); return data?.signedUrl||''; }
@@ -177,7 +175,7 @@ async function nameFor(user_id){
   return name;
 }
 
-/* ---- data ---- */
+/* ========= Data ========= */
 function readFilters(){ return {
   status: el('f-status').value || null,
   kind:   el('f-kind').value   || null,
@@ -205,16 +203,20 @@ async function load(f=readFilters()){
     if(token!==LOAD_TOKEN) return;
     UI.tbody.innerHTML='';
     for(const r of rows){
-      const staff=await nameFor(r.user_id);
+      const staff = await nameFor(r.user_id);
       const { data:notes } = await sb.from('request_notes').select('note').eq('request_id',r.id);
-      const rec=(notes||[]).find(n=>typeof n.note==='string' && n.note.startsWith('receipt:'));
+      const rec = (notes||[]).find(n => typeof n.note === 'string' && n.note.startsWith('receipt:'));
       const link = rec ? `<a target="_blank" rel="noopener" href="${await signedUrl(rec.note.replace('receipt:',''))}">View</a>` : '';
 
       const sel=`sel-${r.id}`, com=`com-${r.id}`, btn=`btn-${r.id}`;
       const options=['Pending','Approved','Declined','Paid'].map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('');
-      const descSafe=String(r.description||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
-      UI.tbody.insertAdjacentHTML('beforeend',`
+      /* escape description */
+      const descSafe = String(r.description||'')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
+      UI.tbody.insertAdjacentHTML('beforeend', `
         <tr>
           <td>${new Date(r.created_at).toLocaleDateString()}</td>
           <td>${staff}</td>
@@ -232,40 +234,42 @@ async function load(f=readFilters()){
           <td>${link}</td>
         </tr>
       `);
+
       document.getElementById(btn).onclick = ()=> updateStatus(r.id, document.getElementById(sel).value, document.getElementById(com).value.trim());
     }
   }catch(err){
-    UI.tbody.innerHTML=`<tr><td colspan="8">${err.message||String(err)}</td></tr>`;
+    UI.tbody.innerHTML = `<tr><td colspan="8">${err.message||String(err)}</td></tr>`;
   }
 }
 
-/* ---- update ---- */
+/* ========= Update ========= */
 async function updateStatus(id,next,comment){
   try{
     if(next==='Paid'){
-      const method=prompt('Payment method (e.g., Transfer, Cash, PayPal):','Transfer'); if(method===null) return;
-      const reference=prompt('Reference / Transaction ID:','');
+      const method = prompt('Payment method (e.g., Transfer, Cash, PayPal):','Transfer'); if(method===null) return;
+      const reference = prompt('Reference / Transaction ID:','');
       await sb.from('payouts').insert({ request_id:id, paid_by:me.id, method, reference });
     }
-    await sb.from('requests').update({ status: next }).eq('id',id);
-    if(comment) await sb.from('request_notes').insert({ request_id:id, author_id:me.id, note:comment });
+    await sb.from('requests').update({ status: next }).eq('id', id);
+    if(comment){ await sb.from('request_notes').insert({ request_id:id, author_id:me.id, note: comment }); }
     await sb.from('request_notes').insert({ request_id:id, author_id:me.id, note:`Status -> ${next}` });
     await load(); calcTotals();
   }catch(err){ alert(err.message||String(err)); }
 }
 
-/* ---- totals ---- */
+/* ========= Totals ========= */
 async function calcTotals(){
   const f=readFilters();
   let q=sb.from('requests').select('amount,currency').eq('status','Paid');
-  if(f.from) q=q.gte('created_at',f.from+'T00:00:00Z');
-  if(f.to)   q=q.lte('created_at',f.to+'T23:59:59Z');
+  if(f.from) q=q.gte('created_at', f.from+'T00:00:00Z');
+  if(f.to)   q=q.lte('created_at', f.to+'T23:59:59Z');
   const { data, error } = await q;
   if(error){ UI.totals.textContent='Totals: error'; return; }
-  UI.totals.textContent = jmFormatTotalsLabel(jmSummarizePaidTotals(data||[]));
+  const totals = JT.summarizePaidTotals(data||[]);
+  UI.totals.textContent = JT.formatPaidTotalsLabel(totals);
 }
 
-/* ---- filter/ui events ---- */
+/* ========= Filter & Export ========= */
 el('btn-filter').onclick=()=>{ load(); calcTotals(); };
 el('btn-clear').onclick =()=>{ el('f-status').value=''; el('f-kind').value=''; el('f-from').value=''; el('f-to').value=''; load(); calcTotals(); };
 el('btn-export').onclick=async()=>{
