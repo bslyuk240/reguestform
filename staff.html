@@ -8,264 +8,66 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0E141B">
 <style>
-  :root{
-    --jm-primary:#08A045; --jm-dark:#0E141B; --jm-bg:#F6F8FA; --jm-border:#E7EAEE;
-    --pill-pending:#f7c873; --pill-approved:#51c36a; --pill-declined:#e35a5a; --pill-paid:#34c0d3;
-  }
+  :root{--jm-primary:#08A045; --jm-dark:#0E141B; --jm-bg:#F6F8FA; --jm-border:#E7EAEE;
+        --pill-pending:#fff3cd; --pill-pending-b:#ffe69c; --pill-approved:#d1e7dd; --pill-approved-b:#a3cfbb;
+        --pill-declined:#f8d7da; --pill-declined-b:#f1aeb5; --pill-paid:#cff4fc; --pill-paid-b:#9eeaf9;
+        --pill-cancel:#ececec; --pill-cancel-b:#d9d9d9;}
   *{box-sizing:border-box}
-  body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#fff;color:#111}
-  header{padding:18px 20px}
-  header h1{margin:0;font-size:36px;font-weight:800}
-  main{max-width:1100px;margin:0 auto;padding:0 20px 48px}
-  .card{margin-top:20px}
-  /* My Requests table look like your mock */
-  table{width:100%;border-collapse:separate;border-spacing:0 18px}
-  thead th{font-size:34px;font-weight:800;padding:0 12px}
-  tbody td{padding:10px 12px;border-top:2px dashed #333}
-  tbody tr:last-child td{border-bottom:2px dashed #333}
-  .status-pill{display:inline-block;padding:4px 12px;border-radius:12px;color:#fff;font-weight:700}
-  .st-Pending{background:var(--pill-pending);color:#2f1d00}
-  .st-Approved{background:var(--pill-approved)}
-  .st-Declined{background:var(--pill-declined)}
-  .st-Paid{background:var(--pill-paid)}
-  .amount{font-weight:700}
-  .comment-box{border:2px solid #000; border-radius:4px; padding:10px; min-height:36px; background:#fff}
-  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
-  .toolbar input,.toolbar select{padding:8px 10px;font:inherit;border:1px solid #ddd;border-radius:8px}
-  .btn{padding:9px 12px;border-radius:8px;border:1px solid #ddd;background:#f6f8fa;cursor:pointer}
+  body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--jm-bg);color:#1f2937}
+  header{background:var(--jm-dark);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;gap:10px;align-items:center}
+  .brand img{width:28px;height:28px;border-radius:6px;object-fit:cover}
+  .brand h1{font-size:16px;margin:0}
+  .sub{opacity:.75;font-size:12px;margin-top:2px}
+  .btn{cursor:pointer;padding:9px 12px;border-radius:9px;border:1px solid var(--jm-border);background:#fff}
   .btn.primary{background:var(--jm-primary);color:#fff;border-color:transparent}
-  .meta{color:#6b7280;font-size:12px;margin-top:6px}
-  /* Sign-in card simple */
-  .auth{max-width:520px}
-  .auth input{width:100%;padding:10px;border:1px solid #ddd;border-radius:10px;margin-top:6px}
-  .auth .btns{display:flex;gap:8px;margin-top:10px}
+  .btn[disabled]{opacity:.6;cursor:not-allowed}
+  main{max-width:1100px;margin:24px auto;padding:0 16px}
+  .card{background:#fff;border:1px solid var(--jm-border);border-radius:12px;padding:16px;margin-bottom:16px}
+  label{display:block;font-size:12px;color:#374151;margin-bottom:6px}
+  input,select,textarea{width:100%;padding:10px;border:1px solid #d8dbe0;border-radius:10px;font:inherit}
+  textarea{min-height:90px}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .row>*{flex:1 1 240px}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
+  .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;border:1px solid transparent}
+  .Pending{background:var(--pill-pending);border-color:var(--pill-pending-b)}
+  .Approved{background:var(--pill-approved);border-color:var(--pill-approved-b)}
+  .Declined{background:var(--pill-declined);border-color:var(--pill-declined-b)}
+  .Paid{background:var(--pill-paid);border-color:var(--pill-paid-b)}
+  .Cancelled{background:var(--pill-cancel);border-color:var(--pill-cancel-b)}
+  a.switch{color:var(--jm-primary);text-decoration:none}
+  .foot-note{font-size:12px;color:#6b7280}
   .hidden{display:none}
-  /* Paid History card */
-  .history-card{margin-top:24px;border-top:1px solid #eee;padding-top:8px}
-  .history-card table{border-spacing:0 8px}
-  .history-card thead th{font-size:16px}
-  .history-card tbody td{border:0;padding:6px 0}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+  /* simple modal for full history (optional access) */
+  dialog{border:0;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.2);max-width:560px;width:90%}
+  dialog::backdrop{background:rgba(0,0,0,.35)}
+  .history-list{max-height:300px;overflow:auto;border:1px solid #eee;border-radius:8px;padding:8px}
+  .history-item{padding:6px 4px;border-bottom:1px dashed #eee}
+  .history-item:last-child{border-bottom:0}
 </style>
 </head>
 <body>
 <header>
-  <h1>Staff.html</h1>
+  <div class="brand">
+    <img src="logo.png" alt="JM">
+    <div>
+      <h1>JulineMart • Staff</h1>
+      <div class="sub">Petty Cash & Reimbursements</div>
+    </div>
+  </div>
+  <div>
+    <span id="whoami"></span>
+    <button id="btn-signout" class="btn hidden" type="button">Sign out</button>
+  </div>
 </header>
 
 <main>
-  <!-- Sign in / Register -->
-  <section id="signin" class="auth">
-    <h3>Sign in</h3>
-    <label>Email <input id="email" type="email" placeholder="you@julinemart.com" autocomplete="username"></label>
-    <label>Password <input id="password" type="password" placeholder="Password" autocomplete="current-password"></label>
-    <div class="btns">
-      <button id="btn-login" class="btn primary" type="button">Log in</button>
-      <button id="btn-register" class="btn" type="button">Register</button>
-    </div>
-    <div id="auth-msg" class="meta"></div>
-    <div class="meta">Admin? <a href="admin.html">Go to Admin</a></div>
-  </section>
-
-  <!-- New request -->
-  <section id="new" class="card hidden">
-    <h3>New Request</h3>
-    <div class="toolbar">
-      <select id="kind">
-        <option value="petty_cash">Petty Cash (advance)</option>
-        <option value="reimbursement">Reimbursement (pay me back)</option>
-      </select>
-      <input id="amount" type="number" step="0.01" placeholder="Amount">
-      <select id="currency"><option>GBP</option><option>NGN</option><option>USD</option><option>EUR</option></select>
-      <input id="needed_by" type="date" placeholder="Needed by (optional)">
-    </div>
-    <textarea id="description" placeholder="What is this for?" style="width:100%;min-height:100px;padding:12px;border:1px solid #ddd;border-radius:10px"></textarea>
-    <div class="meta" style="margin-top:6px">Attach receipts (PNG/JPG/PDF):</div>
-    <input id="receipts" type="file" accept=".png,.jpg,.jpeg,.pdf" multiple>
-    <div style="margin-top:10px"><button id="submit" class="btn primary" type="button">Submit</button></div>
-    <div id="new-msg" class="meta"></div>
-  </section>
-
-  <!-- My Requests -->
-  <section id="mine" class="card hidden">
-    <h3>My Requests</h3>
-    <div class="toolbar">
-      <select id="f-status">
-        <option value="">Status: All</option>
-        <option>Pending</option><option>Approved</option><option>Declined</option><option>Paid</option><option>Cancelled</option>
-      </select>
-      <input id="f-from" type="date">
-      <input id="f-to" type="date">
-      <input id="f-q" type="search" placeholder="Search description…">
-      <button id="btn-apply" class="btn" type="button">Apply</button>
-      <button id="btn-clear" class="btn" type="button">Clear</button>
-      <button id="btn-refresh" class="btn" type="button">Refresh</button>
-    </div>
-
-    <table id="tbl">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>status</th>
-          <th>Amount</th>
-          <th>Comment</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-
-    <div class="history-card">
-      <h4>Paid History (by month)</h4>
-      <table id="paid">
-        <thead><tr><th>Month</th><th>Total Paid</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </section>
-</main>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script>
-const sb = supabase.createClient(
-  "https://hmguraxzebhspednbbav.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o"
-);
-
-const $ = id => document.getElementById(id);
-const E = {
-  signin: $('signin'), new: $('new'), mine: $('mine'),
-  email: $('email'), pass: $('password'), authMsg: $('auth-msg'),
-  kind: $('kind'), amount: $('amount'), currency: $('currency'), needed: $('needed_by'), desc: $('description'),
-  receipts: $('receipts'), submit: $('submit'), newMsg: $('new-msg'),
-  tbody: document.querySelector('#tbl tbody'),
-  fStatus: $('f-status'), fFrom: $('f-from'), fTo: $('f-to'), fQ: $('f-q'),
-  paidBody: document.querySelector('#paid tbody')
-};
-
-let USER=null, INIT=false, LOADSEQ=0;
-
-function show(section){ [E.signin,E.new,E.mine].forEach(x=>x.classList.add('hidden')); section.classList.remove('hidden'); }
-
-async function init(){
-  const { data:{ session } } = await sb.auth.getSession();
-  USER = session?.user ?? null;
-  if(USER){ show(E.new); E.mine.classList.remove('hidden'); loadMine(); loadPaid(); realtime(); }
-  else{ show(E.signin); }
-}
-function once(){ if(INIT) return; INIT=true; init(); }
-sb.auth.onAuthStateChange(()=>once()); once();
-
-/* AUTH */
-$('btn-login').onclick = async e=>{
-  const email=E.email.value.trim(), pw=E.pass.value.trim();
-  if(!email||!pw){E.authMsg.textContent='Enter email & password.';return;}
-  $('btn-login').disabled=true; $('btn-login').textContent='Logging in…';
-  const { error } = await sb.auth.signInWithPassword({ email, password:pw });
-  $('btn-login').disabled=false; $('btn-login').textContent='Log in';
-  if(error) E.authMsg.textContent = error.message; else location.reload();
-};
-$('btn-register').onclick = async e=>{
-  const email=E.email.value.trim(), pw=E.pass.value.trim();
-  if(!email||!pw){E.authMsg.textContent='Enter email & password.';return;}
-  $('btn-register').disabled=true; $('btn-register').textContent='Registering…';
-  const { data, error } = await sb.auth.signUp({ email, password:pw });
-  $('btn-register').disabled=false; $('btn-register').textContent='Register';
-  if(error) E.authMsg.textContent = error.message;
-  else if(data.session) location.reload();
-  else E.authMsg.textContent='Registered! Please log in.';
-};
-
-/* SUBMIT */
-E.submit.onclick = async ()=>{
-  if(!USER){E.newMsg.textContent='Please log in first.';return;}
-  const amount=parseFloat(E.amount.value||0);
-  const body={ user_id:USER.id, kind:E.kind.value, amount, currency:E.currency.value, needed_by:E.needed.value||null, description:E.desc.value.trim() };
-  if(!(amount>0)||!body.description){E.newMsg.textContent='Fill amount and description.';return;}
-  E.submit.disabled=true; E.submit.textContent='Submitting…';
-  const { data:req, error } = await sb.from('requests').insert(body).select().single();
-  if(error){E.newMsg.textContent=error.message;E.submit.disabled=false;E.submit.textContent='Submit';return;}
-  // upload receipts -> save as notes
-  for(const f of [...E.receipts.files]){
-    const ext=(f.name.split('.').pop()||'bin').toLowerCase();
-    const path=`receipts/${USER.id}/${crypto.randomUUID()}.${ext}`;
-    await sb.storage.from('receipts').upload(path, f, { upsert:false });
-    await sb.from('request_notes').insert({ request_id:req.id, author_id:USER.id, note:`receipt:${path}` });
-  }
-  E.newMsg.textContent='Request submitted.'; E.amount.value=''; E.desc.value=''; E.needed.value=''; E.receipts.value='';
-  E.submit.disabled=false; E.submit.textContent='Submit';
-  loadMine(); loadPaid();
-};
-
-/* LIST + FILTERS */
-$('btn-apply').onclick = ()=> loadMine(readFilters());
-$('btn-clear').onclick = ()=>{E.fStatus.value='';E.fFrom.value='';E.fTo.value='';E.fQ.value='';loadMine();}
-$('btn-refresh').onclick = ()=> loadMine(readFilters());
-function readFilters(){ return {status:E.fStatus.value||null, from:E.fFrom.value||null, to:E.fTo.value||null, q:E.fQ.value.trim()||null}; }
-
-function pill(status){
-  const cls = status==='Approved'?'st-Approved':status==='Declined'?'st-Declined':status==='Paid'?'st-Paid':'st-Pending';
-  return `<span class="status-pill ${cls}">${status}</span>`;
-}
-function fmtAmt(a){ return "#"+Number(a||0).toLocaleString(); }
-
-async function latestComment(id){
-  const { data } = await sb.from('request_notes')
-    .select('note,created_at').eq('request_id',id)
-    .order('created_at',{ascending:false}).limit(10);
-  const notes = (data||[]).filter(n=>!n.note.startsWith('receipt:'));
-  return notes.length? notes[0].note : '';
-}
-
-async function loadMine(filters={}){
-  const seq=++LOADSEQ;
-  E.tbody.innerHTML='<tr><td colspan="4">Loading…</td></tr>';
-  let q = sb.from('requests').select('*').eq('user_id', USER.id).order('created_at',{ascending:false});
-  if(filters.status) q = q.eq('status',filters.status);
-  if(filters.from) q = q.gte('created_at',filters.from+'T00:00:00Z');
-  if(filters.to) q = q.lte('created_at',filters.to+'T23:59:59Z');
-  if(filters.q) q = q.ilike('description', `%${filters.q}%`);
-  const { data, error } = await q;
-  if(seq!==LOADSEQ) return;
-  if(error){E.tbody.innerHTML=`<tr><td colspan="4">${error.message}</td></tr>`;return;}
-
-  E.tbody.innerHTML='';
-  for(const r of data){
-    const c = await latestComment(r.id);
-    E.tbody.insertAdjacentHTML('beforeend', `
-      <tr>
-        <td>${new Date(r.created_at).toLocaleDateString()}</td>
-        <td>${pill(r.status)}</td>
-        <td class="amount">${fmtAmt(r.amount)}</td>
-        <td><div class="comment-box">${c||''}</div></td>
-      </tr>
-    `);
-  }
-}
-
-/* Paid history (by month) */
-async function loadPaid(){
-  E.paidBody.innerHTML='<tr><td colspan="2">Loading…</td></tr>';
-  const { data } = await sb.from('requests').select('amount,created_at').eq('user_id',USER.id).eq('status','Paid').order('created_at',{ascending:false});
-  const groups={};
-  (data||[]).forEach(r=>{
-    const d=new Date(r.created_at); const ym=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    groups[ym]=(groups[ym]||0)+Number(r.amount||0);
-  });
-  const rows=Object.entries(groups).sort((a,b)=>a[0]<b[0]?1:-1);
-  E.paidBody.innerHTML = rows.length? '' : '<tr><td colspan="2">No paid items yet.</td></tr>';
-  rows.forEach(([m,total])=> E.paidBody.insertAdjacentHTML('beforeend', `<tr><td>${m}</td><td>GBP ${total.toFixed(2)}</td></tr>`));
-}
-
-/* Realtime: refresh list on changes */
-let ch=null;
-function realtime(){
-  if(ch) sb.removeChannel(ch);
-  ch = sb.channel('req-'+USER.id)
-    .on('postgres_changes',{event:'*',schema:'public',table:'requests',filter:`user_id=eq.${USER.id}`},()=>{loadMine(readFilters());loadPaid();})
-    .subscribe();
-}
-</script>
-</body>
-      </html>    <h3>Staff Access</h3>
+  <!-- LOGIN / REGISTER -->
+  <div class="card" id="signin-card">
+    <h3>Staff Access</h3>
     <div class="row">
       <div><label>Email</label><input type="email" id="email" placeholder="you@julinemart.com" autocomplete="username"></div>
       <div><label>Password</label><input type="password" id="password" placeholder="Enter password" autocomplete="current-password"></div>
