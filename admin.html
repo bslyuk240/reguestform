@@ -28,7 +28,7 @@
   .Approved{background:#d1e7dd;border:1px solid #a3cfbb}
   .Declined{background:#f8d7da;border:1px solid #f1aeb5}
   .Paid{background:#cff4fc;border:1px solid #9eeaf9}
-  .hidden{display:none}
+  .hidden{display:none !important} /* <- unbreakable */
   .foot{font-size:12px;color:#6b7280}
   td.desc {max-width:360px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   #paid-totals { font-size:14px; background:#f6f8fa; border:1px solid #e7eaee; padding:6px 10px; border-radius:8px; }
@@ -51,7 +51,7 @@
 
 <main>
   <!-- Admin login -->
-  <section id="auth" class="card hidden">
+  <section id="auth" class="card">
     <h3>Admin sign-in</h3>
     <div class="row">
       <div><label>Email</label><input id="email" type="email" placeholder="you@julinemart.com"></div>
@@ -64,7 +64,7 @@
     <p id="auth-msg" class="foot"></p>
   </section>
 
-  <!-- Header with filters + totals + export -->
+  <!-- Header with filters + totals + export (default hidden) -->
   <section id="admin-top" class="card hidden" style="display:flex;justify-content:space-between;align-items:center">
     <div>
       <h3 style="margin:0">All Requests</h3>
@@ -83,7 +83,7 @@
     </div>
   </section>
 
-  <!-- Admin table -->
+  <!-- Admin table (default hidden) -->
   <section id="admin-table-wrap" class="card hidden">
     <table id="admin-table">
       <thead>
@@ -97,11 +97,14 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="totals.js"></script>
 <script>
 const sb = supabase.createClient(
   "https://hmguraxzebhspednbbav.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o"
 );
+
+const { summarizePaidTotals, formatPaidTotalsLabel } = window.JMTotals;
 
 const el=id=>document.getElementById(id);
 const UI={
@@ -112,43 +115,65 @@ const UI={
   totals:el('paid-totals')
 };
 
-let user=null, INITIALIZED=false;
-function showAdmin(show){
+let user=null;
+
+/* Hard hide admin sections immediately on load (belt & braces) */
+(function ensureHidden(){
+  UI.top.classList.add('hidden');
+  UI.tableWrap.classList.add('hidden');
+  UI.btnOut.classList.add('hidden');
+})();
+
+function showAdminUI(show){
   UI.auth.classList.toggle('hidden', show);
   UI.top.classList.toggle('hidden', !show);
   UI.tableWrap.classList.toggle('hidden', !show);
+  UI.btnOut.classList.toggle('hidden', !show);
 }
 
 /* ===== Init & auth ===== */
 async function init(){
   const {data:{session}}=await sb.auth.getSession();
   user=session?.user??null;
+
   if(!user){
-    UI.who.textContent=''; UI.btnOut.classList.add('hidden'); showAdmin(false); return;
+    UI.who.textContent='';
+    showAdminUI(false);
+    return;
   }
-  UI.who.textContent=user.email; UI.btnOut.classList.remove('hidden');
+
+  UI.who.textContent = user.email;
 
   // must be admin
   const { data:prof } = await sb.from('profiles').select('role').eq('user_id',user.id).maybeSingle();
   if((prof?.role||'staff')!=='admin'){
-    showAdmin(false); UI.auth.classList.remove('hidden');
-    UI.authMsg.textContent='Access denied (not admin).'; return;
+    UI.authMsg.textContent='Access denied (not admin).';
+    showAdminUI(false);
+    await sb.auth.signOut(); // ensure no leftover session
+    return;
   }
 
-  showAdmin(true);
+  showAdminUI(true);
   await load(); calcPaidTotals();
 }
-function initOnce(){ if(INITIALIZED) return; INITIALIZED=true; init(); }
-sb.auth.onAuthStateChange(()=>initOnce()); initOnce();
+sb.auth.onAuthStateChange((_evt,_sess)=>init());
+init();
 
+/* login / logout */
 UI.loginBtn.onclick=async(e)=>{
   e.preventDefault();
   const email=el('email').value.trim(), pw=el('password').value.trim();
   if(!email||!pw){ UI.authMsg.textContent='Enter email & password.'; return; }
   const {error}=await sb.auth.signInWithPassword({email,password:pw});
-  if(error) UI.authMsg.textContent=error.message; else location.reload();
+  if(error){ UI.authMsg.textContent=error.message; return; }
+  UI.authMsg.textContent=''; // success will trigger onAuthStateChange → init()
 };
-UI.btnOut.onclick=async()=>{ await sb.auth.signOut(); location.href='staff.html'; };
+
+UI.btnOut.onclick=async()=>{
+  await sb.auth.signOut();
+  showAdminUI(false);
+  location.href='staff.html';
+};
 
 /* ===== Helpers ===== */
 function pill(s){return `<span class="pill ${s}">${s}</span>`;}
@@ -195,18 +220,23 @@ async function load(filters=readFilters()){
     for(const r of rows){
       const staff = await nameFor(r.user_id);
       const { data:notes } = await sb.from('request_notes').select('note').eq('request_id',r.id);
-      const rec=(notes||[]).find(n=>n.note.startsWith('receipt:'));
+      const rec=(notes||[]).find(n=>typeof n.note==='string' && n.note.startsWith('receipt:'));
       let link=''; if(rec){ const url=await signedUrl(rec.note.replace('receipt:','')); if(url) link=`<a href="${url}" target="_blank" rel="noopener">View</a>`; }
 
       const selId=`sel-${r.id}`, cId=`com-${r.id}`, btnId=`btn-${r.id}`;
       const options=['Pending','Approved','Declined','Paid'].map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('');
+
+      /* escape description to avoid XSS */
+      const descSafe = String(r.description||'')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
       UI.tbody.insertAdjacentHTML('beforeend', `
         <tr>
           <td>${new Date(r.created_at).toLocaleDateString()}</td>
           <td>${staff}</td>
           <td>${r.kind.replace('_',' ')}</td>
-          <td class="desc" title="${(r.description||'').replace(/"/g,'&quot;')}">${r.description||''}</td>
+          <td class="desc" title="${descSafe}">${descSafe}</td>
           <td>${fmt(r.amount,r.currency)}</td>
           <td>${pill(r.status)}</td>
           <td>
@@ -230,7 +260,7 @@ async function load(filters=readFilters()){
   }
 }
 
-/* ===== Update status (adds human comment + system log; inserts payout when Paid) ===== */
+/* ===== Update status ===== */
 async function updateStatus(id, next, comment){
   try{
     if(next==='Paid'){
@@ -253,9 +283,8 @@ async function calcPaidTotals(){
   if(f.to)   q=q.lte('created_at', f.to+'T23:59:59Z');
   const { data, error } = await q;
   if(error){ UI.totals.textContent='Totals: error'; return; }
-  const byCur=(data||[]).reduce((m,r)=>{ const cur=r.currency||'UNK'; m[cur]=(m[cur]||0)+Number(r.amount||0); return m; },{});
-  const parts=Object.entries(byCur).map(([cur,sum])=>`${cur} ${sum.toFixed(2)}`);
-  UI.totals.textContent = parts.length ? `Totals: ${parts.join(' • ')}` : 'Totals: 0';
+  const summary = summarizePaidTotals(data||[]);
+  UI.totals.textContent = formatPaidTotalsLabel(summary);
 }
 
 /* ===== Filters + export ===== */
