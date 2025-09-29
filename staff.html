@@ -14,6 +14,7 @@
   .brand img{width:28px;height:28px;border-radius:6px}
   .btn{cursor:pointer;padding:6px 10px;border-radius:8px;border:1px solid var(--jm-border);background:#fff}
   .btn.primary{background:var(--jm-primary);color:#fff;border-color:transparent}
+  .hidden{display:none !important}
   main{max-width:1000px;margin:24px auto;padding:0 16px}
   .card{background:#fff;border:1px solid var(--jm-border);border-radius:12px;padding:16px;margin-bottom:16px}
   .row{display:flex;gap:8px;flex-wrap:wrap}
@@ -26,8 +27,6 @@
   .Approved{background:#d1e7dd;border:1px solid #a3cfbb}
   .Declined{background:#f8d7da;border:1px solid #f1aeb5}
   .Paid{background:#cff4fc;border:1px solid #9eeaf9}
-  .hidden{display:none !important}
-
   /* one-line, compact filters; scroll horizontally on small screens */
   .filters{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto}
   .filters select,.filters input{height:32px}
@@ -45,12 +44,13 @@
 </header>
 
 <main>
-  <!-- Sign in -->
+  <!-- Sign in / Register -->
   <section id="signin-card" class="card">
     <h3>Staff Access</h3>
     <div class="row">
-      <div><label>Email</label><input id="email" type="email" autocomplete="username"></div>
-      <div><label>Password</label><input id="password" type="password" autocomplete="current-password"></div>
+      <div><label>Full Name</label><input id="full_name" type="text" autocomplete="name" placeholder="Your name"></div>
+      <div><label>Email</label><input id="email" type="email" autocomplete="username" placeholder="you@julinemart.com"></div>
+      <div><label>Password</label><input id="password" type="password" autocomplete="current-password" placeholder="Enter password"></div>
     </div>
     <div class="row" style="margin-top:8px">
       <button id="btn-login" class="btn primary" type="button">Log in</button>
@@ -68,7 +68,7 @@
         <select id="kind"><option value="petty_cash">Petty Cash (advance)</option><option value="reimbursement">Reimbursement</option></select>
       </div>
       <div><label>Amount</label><input id="amount" type="number" min="0" step="0.01"></div>
-      <div><label>Currency</label><select id="currency"><option>GBP</option><option>NGN</option><option>USD</option></select></div>
+      <div><label>Currency</label><select id="currency"><option>GBP</option><option>NGN</option><option>USD</option><option>EUR</option></select></div>
       <div><label>Needed by (optional)</label><input id="needed" type="date"></div>
     </div>
     <div><label>Description / Purpose</label><textarea id="description" placeholder="What is this for?"></textarea></div>
@@ -103,17 +103,13 @@ const sb = supabase.createClient(
 
 const $ = id => document.getElementById(id);
 const UI = {
-  signin: $('signin-card'),
-  who: $('whoami'),
-  signout: $('btn-signout'),
-  pageNew: $('page-new'),
-  pageMine: $('page-mine'),
-  tbody: document.querySelector('#mine-table tbody'),
-  msg: $('signin-msg'),
+  signin: $('signin-card'), who: $('whoami'), signout: $('btn-signout'),
+  pageNew: $('page-new'), pageMine: $('page-mine'),
+  tbody: document.querySelector('#mine-table tbody'), msg: $('signin-msg'),
 };
 let currentUser = null;
 
-/* ---------- UI toggle (robust) ---------- */
+/* ---------- UI toggle ---------- */
 function setLoggedInUI(isIn){
   UI.signin.classList.toggle('hidden', isIn);
   UI.pageNew.classList.toggle('hidden', !isIn);
@@ -122,11 +118,15 @@ function setLoggedInUI(isIn){
 }
 
 /* ---------- Session/init ---------- */
+async function getDisplayName(uid, fallback){
+  const { data } = await sb.from('profiles').select('full_name,email').eq('user_id',uid).maybeSingle();
+  return (data?.full_name && data.full_name.trim()) || data?.email || fallback || (uid||'').slice(0,8);
+}
 async function readSessionAndRender(){
-  const { data:{ session } } = await sb.auth.getSession();
+  const { data:{session} } = await sb.auth.getSession();
   currentUser = session?.user ?? null;
   if(currentUser){
-    UI.who.textContent = currentUser.email || '';
+    UI.who.textContent = await getDisplayName(currentUser.id, currentUser.email);
     setLoggedInUI(true);
     loadMine();
     subscribeRealtime();
@@ -138,32 +138,30 @@ async function readSessionAndRender(){
 sb.auth.onAuthStateChange(readSessionAndRender);
 readSessionAndRender();
 
-/* ---------- Auth actions ---------- */
+/* ---------- Auth ---------- */
 $('btn-login').onclick = async ()=>{
-  UI.msg.textContent = '';
-  const email = $('email').value.trim();
-  const password = $('password').value.trim();
-  if(!email || !password){ UI.msg.textContent='Enter email & password.'; return; }
+  UI.msg.textContent='';
+  const email=$('email').value.trim(), password=$('password').value.trim();
+  if(!email||!password){ UI.msg.textContent='Enter email & password.'; return; }
   const { error } = await sb.auth.signInWithPassword({ email, password });
-  if(error){ UI.msg.textContent = error.message; return; }
-  // Immediately flip UI in case onAuth event is delayed on some browsers
-  setLoggedInUI(true);
-  readSessionAndRender();
+  if(error){ UI.msg.textContent=error.message; return; }
+  setLoggedInUI(true); readSessionAndRender();
 };
 
 $('btn-register').onclick = async ()=>{
   UI.msg.textContent='';
-  const email = $('email').value.trim();
-  const password = $('password').value.trim();
-  if(!email || !password){ UI.msg.textContent='Enter email & password.'; return; }
+  const full_name=$('full_name').value.trim();
+  const email=$('email').value.trim();
+  const password=$('password').value.trim();
+  if(!full_name || !email || !password){ UI.msg.textContent='Enter name, email & password.'; return; }
   const { data, error } = await sb.auth.signUp({ email, password });
-  if(error){ UI.msg.textContent = error.message; return; }
-  if(data?.session){
-    setLoggedInUI(true);
-    readSessionAndRender();
-  }else{
-    UI.msg.textContent = 'Registered! Please log in.';
+  if(error){ UI.msg.textContent=error.message; return; }
+  if(data?.user){
+    // Store name & email in profiles (idempotent)
+    await sb.from('profiles').upsert({ user_id: data.user.id, full_name, email }, { onConflict: 'user_id' });
   }
+  if(data?.session){ setLoggedInUI(true); readSessionAndRender(); }
+  else { UI.msg.textContent='Registered! Please log in.'; }
 };
 
 UI.signout.onclick = async ()=>{ await sb.auth.signOut(); setLoggedInUI(false); location.reload(); };
@@ -178,8 +176,7 @@ $('btn-submit').onclick = async ()=>{
     .insert({ user_id: currentUser.id, kind, amount, currency, needed_by: needed, description: desc })
     .select().single();
   if(error){ alert(error.message); return; }
-
-  // upload receipts (optional)
+  // upload receipts
   for(const f of $('receipts').files){
     const path = `${currentUser.id}/${Date.now()}-${f.name}`;
     await sb.storage.from('receipts').upload(path, f);
@@ -189,10 +186,9 @@ $('btn-submit').onclick = async ()=>{
   loadMine();
 };
 
-/* ---------- Staff list (with admin reason only) ---------- */
+/* ---------- My Requests ---------- */
 function pill(s){return `<span class="pill ${s}">${s}</span>`;}
 function fmt(a,c){return `${c} ${Number(a||0).toFixed(2)}`;}
-
 async function latestAdminComment(requestId){
   const { data } = await sb.from('request_notes')
     .select('note,created_at').eq('request_id',requestId)
@@ -201,7 +197,6 @@ async function latestAdminComment(requestId){
   const human = data.filter(n => n.note && !n.note.startsWith('receipt:') && !n.note.startsWith('Status ->'));
   return human.length ? human[0].note : '';
 }
-
 async function loadMine(filters={}){
   if(!currentUser) return;
   let q=sb.from('requests').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
@@ -223,8 +218,6 @@ async function loadMine(filters={}){
       </tr>`);
   }
 }
-
-/* filters */
 $('btn-apply').onclick = ()=> loadMine({
   status:$('f-status').value||null,
   from:$('f-from').value||null,
@@ -233,7 +226,7 @@ $('btn-apply').onclick = ()=> loadMine({
 });
 $('btn-clear').onclick = ()=>{ $('f-status').value=''; $('f-from').value=''; $('f-to').value=''; $('f-desc').value=''; loadMine(); };
 
-/* realtime refresh for this user */
+/* realtime refresh */
 let rt=null;
 function subscribeRealtime(){
   if(rt) sb.removeChannel(rt);
