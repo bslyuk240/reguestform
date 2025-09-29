@@ -5,10 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>JulineMart • Staff</title>
 <link rel="icon" href="logo.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0E141B">
 <style>
   :root{--jm-primary:#08A045; --jm-dark:#0E141B; --jm-bg:#F6F8FA; --jm-border:#E7EAEE;
         --pill-pending:#fff3cd; --pill-pending-b:#ffe69c; --pill-approved:#d1e7dd; --pill-approved-b:#a3cfbb;
-        --pill-declined:#f8d7da; --pill-declined-b:#f1aeb5; --pill-paid:#cff4fc; --pill-paid-b:#9eeaf9;}
+        --pill-declined:#f8d7da; --pill-declined-b:#f1aeb5; --pill-paid:#cff4fc; --pill-paid-b:#9eeaf9;
+        --pill-cancel:#ececec; --pill-cancel-b:#d9d9d9;}
   *{box-sizing:border-box}
   body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--jm-bg);color:#1f2937}
   header{background:var(--jm-dark);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
@@ -19,7 +22,7 @@
   .btn{cursor:pointer;padding:9px 12px;border-radius:9px;border:1px solid var(--jm-border);background:#fff}
   .btn.primary{background:var(--jm-primary);color:#fff;border-color:transparent}
   .btn[disabled]{opacity:.6;cursor:not-allowed}
-  main{max-width:980px;margin:24px auto;padding:0 16px}
+  main{max-width:1100px;margin:24px auto;padding:0 16px}
   .card{background:#fff;border:1px solid var(--jm-border);border-radius:12px;padding:16px;margin-bottom:16px}
   label{display:block;font-size:12px;color:#374151;margin-bottom:6px}
   input,select,textarea{width:100%;padding:10px;border:1px solid #d8dbe0;border-radius:10px;font:inherit}
@@ -27,15 +30,20 @@
   .row{display:flex;gap:12px;flex-wrap:wrap}
   .row>*{flex:1 1 240px}
   table{width:100%;border-collapse:collapse}
-  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
-  .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px}
-  .Pending{background:var(--pill-pending);border:1px solid var(--pill-pending-b)}
-  .Approved{background:var(--pill-approved);border:1px solid var(--pill-approved-b)}
-  .Declined{background:var(--pill-declined);border:1px solid var(--pill-declined-b)}
-  .Paid{background:var(--pill-paid);border:1px solid var(--pill-paid-b)}
+  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
+  .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;border:1px solid transparent}
+  .Pending{background:var(--pill-pending);border-color:var(--pill-pending-b)}
+  .Approved{background:var(--pill-approved);border-color:var(--pill-approved-b)}
+  .Declined{background:var(--pill-declined);border-color:var(--pill-declined-b)}
+  .Paid{background:var(--pill-paid);border-color:var(--pill-paid-b)}
+  .Cancelled{background:var(--pill-cancel);border-color:var(--pill-cancel-b)}
   a.switch{color:var(--jm-primary);text-decoration:none}
   .foot-note{font-size:12px;color:#6b7280}
   .hidden{display:none}
+  .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+  .thumbs a{display:inline-flex;align-items:center;gap:6px;border:1px solid #e5e7eb;border-radius:8px;padding:6px 8px;text-decoration:none;color:#111}
+  .thumbs img{width:28px;height:28px;border-radius:6px;object-fit:cover}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
 </style>
 </head>
 <body>
@@ -88,74 +96,133 @@
     </div>
     <label>Description / Purpose</label>
     <textarea id="description" placeholder="What is this for?"></textarea>
+
+    <!-- multiple receipts -->
+    <label>Receipts / Supporting docs (PNG/JPG/PDF — you can select multiple)</label>
+    <input type="file" id="receipts" accept=".png,.jpg,.jpeg,.pdf" multiple>
+    <div id="receipt-preview" class="thumbs"></div>
+
     <div style="margin-top:10px"><button id="submit-request" class="btn primary" type="button">Submit</button></div>
     <p id="new-msg" class="foot-note"></p>
   </section>
 
-  <!-- MY REQUESTS -->
+  <!-- MY REQUESTS (filters + list + edit/cancel) -->
   <section class="card hidden" id="page-mine">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <h3>My Requests</h3>
-      <button id="btn-refresh" class="btn" type="button">Refresh</button>
+      <div class="toolbar">
+        <select id="f-status">
+          <option value="">Status: All</option>
+          <option>Pending</option><option>Approved</option><option>Declined</option><option>Paid</option><option>Cancelled</option>
+        </select>
+        <input id="f-from" type="date" aria-label="From date">
+        <input id="f-to" type="date" aria-label="To date">
+        <input id="f-q" type="search" placeholder="Search description…" style="min-width:200px">
+        <button id="btn-apply" class="btn" type="button">Apply</button>
+        <button id="btn-clear" class="btn" type="button">Clear</button>
+        <button id="btn-refresh" class="btn" type="button">Refresh</button>
+      </div>
     </div>
     <table id="mine-table">
-      <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead>
+      <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Status</th><th>Receipt(s)</th><th>Actions</th></tr></thead>
       <tbody></tbody>
     </table>
-    <p class="foot-note" style="margin-top:10px">Admin? <a class="switch" href="admin.html">Go to Admin</a></p>
+  </section>
+
+  <!-- Paid History -->
+  <section class="card hidden" id="page-paid">
+    <h3>Paid History (by month)</h3>
+    <div style="overflow:auto">
+      <table id="paid-table">
+        <thead><tr><th>Month</th><th>Total Paid</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </section>
 </main>
 
 <!-- Supabase UMD -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
-/* Your real Supabase credentials (from your message) */
+/* Supabase (your project) */
 const sb = supabase.createClient(
   "https://hmguraxzebhspednbbav.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o"
 );
 
 const el = id => document.getElementById(id);
-const signinCard = el('signin-card'), pageNew = el('page-new'), pageMine = el('page-mine');
+const signinCard = el('signin-card'), pageNew = el('page-new'), pageMine = el('page-mine'), pagePaid = el('page-paid');
 const whoami = el('whoami'), btnSignout = el('btn-signout');
 let currentUser = null;
 
-function show(section){ [signinCard,pageNew,pageMine].forEach(s=>s.classList.add('hidden')); section.classList.remove('hidden'); }
+/* guards */
+let INITIALIZED = false;
+let LOAD_SEQ = 0;
+
+function show(section){ [signinCard,pageNew,pageMine,pagePaid].forEach(s=>s.classList.add('hidden')); section.classList.remove('hidden'); }
 btnSignout.onclick = async ()=>{ await sb.auth.signOut(); location.reload(); };
 
-function setBusy(button, txt){
-  if(!button) return;
-  button.dataset.prev = button.textContent;
-  button.textContent = txt;
-  button.disabled = true;
-  // failsafe: auto-clear after 20s in case of unexpected issues
-  button.dataset.timer = setTimeout(()=>{ clearBusy(button); }, 20000);
-}
-function clearBusy(button){
-  if(!button) return;
-  if(button.dataset.timer){ clearTimeout(button.dataset.timer); delete button.dataset.timer; }
-  button.disabled = false;
-  button.textContent = button.dataset.prev || button.textContent;
-}
+function setBusy(button, txt){ if(!button) return; button.dataset.prev = button.textContent; button.textContent = txt; button.disabled = true; }
+function clearBusy(button){ if(!button) return; button.disabled = false; button.textContent = button.dataset.prev || button.textContent; }
 
+/* ====== INIT + Realtime live notifications ====== */
 async function init(){
-  const { data:{ session }, error } = await sb.auth.getSession();
-  if(error) console.warn("getSession error:", error);
+  const { data:{ session } } = await sb.auth.getSession();
   currentUser = session?.user ?? null;
-  console.log("INIT session:", session);
+
   if(currentUser){
     whoami.textContent = currentUser.email;
     btnSignout.classList.remove('hidden');
     show(pageNew);
     loadMine();
+    loadPaidHistory();
+    enableRealtime();
+    // Ask for notification permission (only once per session)
+    if (Notification && Notification.permission === 'default') {
+      try { await Notification.requestPermission(); } catch {}
+    }
   }else{
     whoami.textContent = "";
     btnSignout.classList.add('hidden');
     show(signinCard);
   }
 }
-sb.auth.onAuthStateChange((evt, session)=>{ console.log("AUTH EVENT:", evt, session); init(); });
+function initOnce(){ if (INITIALIZED) return; INITIALIZED = true; init(); }
+sb.auth.onAuthStateChange(()=>initOnce());
+initOnce();
 
+/* Realtime notifications: alert status changes for THIS user's requests */
+let rtChannel = null;
+function enableRealtime(){
+  try{
+    if(rtChannel) sb.removeChannel(rtChannel);
+    rtChannel = sb.channel('req-status-'+currentUser.id)
+      .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'requests', filter: `user_id=eq.${currentUser.id}` },
+          payload => {
+            if(payload.eventType === 'UPDATE'){
+              const newStatus = payload.new.status;
+              notify(`Request ${payload.new.id} is now ${newStatus}`);
+              loadMine(); loadPaidHistory();
+            }
+            if(payload.eventType === 'INSERT'){
+              notify(`New request submitted.`);
+              loadMine();
+            }
+          })
+      .subscribe();
+  }catch(e){ console.warn('Realtime subscribe failed', e); }
+}
+function notify(message){
+  try{
+    if(!('Notification' in window)) return;
+    if(Notification.permission === 'granted'){
+      new Notification('JulineMart', { body: message, icon: 'logo.png' });
+    }
+  }catch{}
+}
+
+/* ====== AUTH HANDLERS ====== */
 el('btn-login').onclick = async (e)=>{
   e.preventDefault();
   const btn = e.currentTarget;
@@ -164,15 +231,11 @@ el('btn-login').onclick = async (e)=>{
   if(!email || !password){ el('signin-msg').textContent = "Enter email & password."; return; }
   setBusy(btn, "Logging in…");
   try{
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    console.log("Login result:", { data, error });
+    const { error } = await sb.auth.signInWithPassword({ email, password });
     if(error) throw error;
     location.reload();
-  }catch(err){
-    el('signin-msg').textContent = err.message || String(err);
-  }finally{
-    clearBusy(btn);
-  }
+  }catch(err){ el('signin-msg').textContent = err.message || String(err); }
+  finally{ clearBusy(btn); }
 };
 
 el('btn-register').onclick = async (e)=>{
@@ -184,19 +247,34 @@ el('btn-register').onclick = async (e)=>{
   setBusy(btn, "Registering…");
   try{
     const { data, error } = await sb.auth.signUp({ email, password });
-    console.log("Register result:", { data, error });
     if(error) throw error;
     if(data && data.session){ location.reload(); }
     else { el('signin-msg').textContent = "Registered! Please log in."; }
-  }catch(err){
-    el('signin-msg').textContent = err.message || String(err);
-  }finally{
-    clearBusy(btn);
-  }
+  }catch(err){ el('signin-msg').textContent = err.message || String(err); }
+  finally{ clearBusy(btn); }
 };
 
-el('btn-refresh').onclick = (e)=>{ e.preventDefault(); loadMine(); };
+/* ====== RECEIPTS PREVIEW & UPLOAD (multiple) ====== */
+const fileIcon = type => type.includes('pdf') ? '📄' : '';
+el('receipts').addEventListener('change', () => {
+  const box = el('receipt-preview'); box.innerHTML = '';
+  [...el('receipts').files].forEach(f=>{
+    const item = document.createElement('a'); item.href='#';
+    if(f.type.startsWith('image/')){ const img = document.createElement('img'); img.src = URL.createObjectURL(f); item.appendChild(img); item.append(' '+f.name); }
+    else { item.textContent = `${fileIcon(f.type)} ${f.name}`; }
+    box.appendChild(item);
+  });
+});
 
+async function uploadOne(file){
+  const ext=(file.name.split('.').pop()||'bin').toLowerCase();
+  const path=`receipts/${currentUser.id}/${crypto.randomUUID()}.${ext}`;
+  const { data, error } = await sb.storage.from('receipts').upload(path, file, { upsert:false, contentType:file.type||'application/octet-stream' });
+  if(error){ console.warn('upload error', error); return null; }
+  return data.path;
+}
+
+/* ====== SUBMIT NEW REQUEST ====== */
 el('submit-request').onclick = async (e)=>{
   e.preventDefault();
   try{
@@ -207,37 +285,159 @@ el('submit-request').onclick = async (e)=>{
     const needed_by = el('needed_by').value || null;
     const description = el('description').value.trim();
     if(!description || !(amount > 0)){ el('new-msg').textContent = "Fill description and amount."; return; }
-    const { data, error } = await sb.from('requests').insert({ user_id: currentUser.id, kind, amount, currency, needed_by, description }).select().single();
-    console.log("Insert request:", { data, error });
+
+    // Insert request
+    const { data: req, error } = await sb.from('requests')
+      .insert({ user_id: currentUser.id, kind, amount, currency, needed_by, description })
+      .select().single();
     if(error){ el('new-msg').textContent = error.message; return; }
+
+    // Upload all receipts -> save as request_notes (receipt:<path>)
+    const files = [...el('receipts').files];
+    for (const f of files){
+      const p = await uploadOne(f);
+      if(p) await sb.from('request_notes').insert({ request_id: req.id, author_id: currentUser.id, note:`receipt:${p}` });
+    }
+
     el('new-msg').textContent = "Request submitted.";
-    el('amount').value=""; el('description').value=""; el('needed_by').value="";
-    loadMine();
+    el('amount').value=""; el('description').value=""; el('needed_by').value=""; el('receipts').value=""; el('receipt-preview').innerHTML='';
+    loadMine(); loadPaidHistory();
   }catch(err){ el('new-msg').textContent = err.message || String(err); }
 };
 
+/* ====== LIST + FILTERS + EDIT/CANCEL ====== */
 function pill(s){ return `<span class="pill ${s}">${s}</span>`; }
 function fmt(a,c){ return `${c} ${Number(a).toFixed(2)}`; }
+async function signedUrl(path){ if(!path) return ''; const { data, error } = await sb.storage.from('receipts').createSignedUrl(path,600); return error?'':data.signedUrl; }
 
-async function loadMine(){
-  const tbody = document.querySelector('#mine-table tbody');
-  tbody.innerHTML = '<tr><td colspan="4">Loading…</td></tr>';
-  const { data, error } = await sb.from('requests').select('*').order('created_at',{ascending:false});
-  console.log("Load mine:", { data, error });
-  if(error){ tbody.innerHTML = `<tr><td colspan="4">${error.message}</td></tr>`; return; }
-  tbody.innerHTML = '';
-  for(const r of data){
+el('btn-apply').onclick = ()=> loadMine(readFilters());
+el('btn-clear').onclick = ()=>{ el('f-status').value=''; el('f-from').value=''; el('f-to').value=''; el('f-q').value=''; loadMine({}); };
+el('btn-refresh').onclick = ()=> loadMine(readFilters());
+function readFilters(){ return { status:el('f-status').value||null, from:el('f-from').value||null, to:el('f-to').value||null, q:el('f-q').value.trim()||null }; }
+
+async function loadMine(filters={}){
+  const seq = ++LOAD_SEQ;
+  const tbody=document.querySelector('#mine-table tbody');
+  tbody.innerHTML='<tr><td colspan="6">Loading…</td></tr>';
+
+  let q = sb.from('requests').select('*').eq('user_id', currentUser.id).order('created_at',{ascending:false});
+  if(filters.status) q=q.eq('status',filters.status);
+  if(filters.from) q=q.gte('created_at',filters.from+'T00:00:00Z');
+  if(filters.to)   q=q.lte('created_at',filters.to+'T23:59:59Z');
+  if(filters.q)    q=q.ilike('description', `%${filters.q}%`);
+
+  const { data, error } = await q;
+  if(seq !== LOAD_SEQ) return; // stale
+  if(error){ tbody.innerHTML = `<tr><td colspan="6">${error.message}</td></tr>`; return; }
+
+  tbody.innerHTML='';
+  for (const r of data){
+    // receipts for this request
+    const { data: notes } = await sb.from('request_notes').select('*').eq('request_id', r.id);
+    const recs = (notes||[]).filter(n=>n.note.startsWith('receipt:'));
+    let links='';
+    for (const rec of recs){
+      const url = await signedUrl(rec.note.replace('receipt:',''));
+      if(url){
+        const isPdf = url.toLowerCase().includes('.pdf');
+        links += `<a href="${url}" target="_blank" rel="noopener">${isPdf?'📄':'🖼️'} receipt</a> `;
+      }
+    }
+
+    // actions for Pending
+    let actions = '';
+    if(r.status === 'Pending'){
+      actions = `
+        <button class="btn" data-edit="${r.id}">Edit</button>
+        <button class="btn" data-cancel="${r.id}">Cancel</button>
+      `;
+    }
+
     tbody.insertAdjacentHTML('beforeend', `
       <tr>
         <td>${new Date(r.created_at).toLocaleDateString()}</td>
         <td>${r.kind.replace('_',' ')}</td>
         <td>${fmt(r.amount,r.currency)}</td>
         <td>${pill(r.status)}</td>
-      </tr>`);
+        <td>${links || '—'}</td>
+        <td>${actions}</td>
+      </tr>
+    `);
   }
+
+  // wire actions
+  document.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => editRequest(b.dataset.edit));
+  document.querySelectorAll('[data-cancel]').forEach(b => b.onclick = () => cancelRequest(b.dataset.cancel));
 }
 
-init();
+async function editRequest(id){
+  // simple prompts (keep UI minimal)
+  const amount = prompt('New amount (leave blank to keep)', '');
+  const description = prompt('New description (leave blank to keep)', '');
+  const needed_by = prompt('New needed-by date (YYYY-MM-DD) (blank to keep)', '');
+
+  const patch = {};
+  if(amount && !isNaN(parseFloat(amount))) patch.amount = parseFloat(amount);
+  if(description && description.trim()) patch.description = description.trim();
+  if(needed_by && /^\d{4}-\d{2}-\d{2}$/.test(needed_by)) patch.needed_by = needed_by;
+
+  if(Object.keys(patch).length === 0) return;
+
+  const { error } = await sb.from('requests')
+    .update(patch)
+    .eq('id', id)
+    .eq('user_id', currentUser.id)
+    .eq('status', 'Pending');   // only pending can be edited
+  if(error){ alert(error.message); return; }
+  await sb.from('request_notes').insert({ request_id:id, author_id: currentUser.id, note:'Edited by staff' });
+  loadMine(readFilters());
+}
+
+async function cancelRequest(id){
+  if(!confirm('Cancel this request? This cannot be undone.')) return;
+  const { error } = await sb.from('requests')
+    .update({ status:'Cancelled' })
+    .eq('id', id)
+    .eq('user_id', currentUser.id)
+    .eq('status', 'Pending');
+  if(error){ alert(error.message); return; }
+  await sb.from('request_notes').insert({ request_id:id, author_id: currentUser.id, note:'Cancelled by staff' });
+  loadMine(readFilters());
+}
+
+/* ====== PAID HISTORY (sum by month for this user) ====== */
+async function loadPaidHistory(){
+  const tbody = document.querySelector('#paid-table tbody');
+  tbody.innerHTML = '<tr><td colspan="2">Loading…</td></tr>';
+  const { data, error } = await sb
+    .from('requests')
+    .select('amount, currency, created_at')
+    .eq('user_id', currentUser.id)
+    .eq('status', 'Paid')
+    .order('created_at',{ascending:false});
+  if(error){ tbody.innerHTML = `<tr><td colspan="2">${error.message}</td></tr>`; return; }
+
+  // group by YYYY-MM
+  const groups = {};
+  for(const r of data){
+    const d = new Date(r.created_at);
+    const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    groups[ym] = (groups[ym] || 0) + Number(r.amount || 0);
+  }
+  const rows = Object.entries(groups).sort((a,b)=> a[0]<b[0]?1:-1);
+  tbody.innerHTML = rows.length? '' : '<tr><td colspan="2">No paid items yet.</td></tr>';
+  for(const [ym, total] of rows){
+    tbody.insertAdjacentHTML('beforeend', `<tr><td>${ym}</td><td>GBP ${total.toFixed(2)}</td></tr>`);
+  }
+
+  // show card when logged in
+  pagePaid.classList.remove('hidden');
+}
+
+/* ====== PWA service worker (installable) ====== */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+}
 </script>
 </body>
 </html>
