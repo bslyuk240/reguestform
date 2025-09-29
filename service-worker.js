@@ -1,32 +1,31 @@
-// Safe service worker: cache shell, never touch Supabase traffic
-const CACHE = 'jm-requests-v2';
-const ASSETS = ['/', '/index.html', '/staff.html', '/admin.html', '/logo.png'];
+// Safe service worker: cache shell only, NEVER intercept Supabase traffic
+const CACHE = 'jm-requests-v3';
+const ASSETS = [
+  '/', '/index.html', '/staff.html', '/admin.html',
+  '/logo.png', '/manifest.webmanifest'
+];
 
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+self.addEventListener('install', evt => {
+  evt.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
 });
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
+self.addEventListener('activate', evt => {
+  evt.waitUntil(
     caches.keys().then(keys => Promise.all(keys.map(k => k !== CACHE && caches.delete(k))))
   );
 });
 
-// Network-first for shell; completely ignore Supabase requests
-self.addEventListener('fetch', e => {
-  const url = e.request.url;
+// Network-first for shell; ignore any requests to supabase.co (auth/db/storage/functions)
+self.addEventListener('fetch', evt => {
+  const url = evt.request.url;
+  if (evt.request.method !== 'GET') return;
+  if (url.includes('supabase.co')) return; // <-- important
 
-  // Never intercept Supabase (auth, db, storage, functions)
-  if (url.includes('supabase.co')) return;
-
-  if (e.request.method !== 'GET') return;
-
-  e.respondWith(
-    fetch(e.request).then(res => {
-      // cache a copy of successful GETs
+  evt.respondWith(
+    fetch(evt.request).then(res => {
       const copy = res.clone();
-      caches.open(CACHE).then(c => c.put(e.request, copy));
+      caches.open(CACHE).then(c => c.put(evt.request, copy));
       return res;
-    }).catch(() => caches.match(e.request))
+    }).catch(() => caches.match(evt.request))
   );
 });
