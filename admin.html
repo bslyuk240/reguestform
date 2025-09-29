@@ -217,18 +217,15 @@ UI.form.addEventListener('submit', async (e) => {
       throw error;
     }
 
-    // Wait for session to be established
-    UI.msg.textContent = 'Verifying session...';
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Use the session from login response directly
+    UI.msg.textContent = 'Checking admin role...';
+    console.log('Using session from login response');
 
-    const { data: sessionData } = await sb.auth.getSession();
-    console.log('Post-login session:', sessionData);
-
-    if (!sessionData?.session) {
+    if (!data?.session) {
       throw new Error('Session not created after login');
     }
 
-    me = sessionData.session.user;
+    me = data.session.user;
     
     // Check role
     UI.msg.textContent = 'Checking admin role...';
