@@ -142,45 +142,99 @@ sb.auth.onAuthStateChange(init); init();
 
 /* Login */
 const form = document.getElementById('admin-form');
-const msg  = document.getElementById('auth-msg');
+const msg = document.getElementById('auth-msg');
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  msg.textContent = 'Logging in…';
+  msg.style.color = '#666';
+  msg.textContent = 'Logging in...';
+  
   try {
     const email = document.getElementById('email').value.trim();
-    const pw    = document.getElementById('password').value.trim();
-    if (!email || !pw) { msg.textContent = 'Enter email & password.'; return; }
-
-    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
-    if (error) throw error;
-
-    // Use the session we already have, don’t wait on getSession
-    const session = data?.session;
-    if (!session) {
-      // Fallback: read once (some browsers delay writes)
-      const g = await sb.auth.getSession();
-      if (!g?.data?.session) {
-        msg.textContent = 'Logged in, but no session was created. Clear cache/service worker and retry.';
-        return;
-      }
+    const pw = document.getElementById('password').value.trim();
+    
+    if (!email || !pw) {
+      msg.style.color = '#c00';
+      msg.textContent = 'Enter email & password.';
+      return;
     }
 
-    // Role check -> show UI right away
-    msg.textContent = 'Checking admin role…';
-    const uid = (data?.session?.user?.id) || (await sb.auth.getUser()).data?.user?.id;
-    const { data: prof, error: roleErr } = await sb.from('profiles')
-      .select('role').eq('user_id', uid).maybeSingle();
-    if (roleErr) { msg.textContent = 'Role check failed: ' + roleErr.message; return; }
-    if ((prof?.role || 'staff') !== 'admin') { msg.textContent = 'Access denied (not admin).'; return; }
+    console.log('Admin attempting login for:', email);
 
-    msg.textContent = 'Welcome.';
+    // Sign in
+    const { data, error } = await sb.auth.signInWithPassword({ 
+      email, 
+      password: pw 
+    });
+    
+    if (error) {
+      console.error('Admin login error:', error);
+      throw error;
+    }
+
+    console.log('Admin login response:', data);
+
+    // Wait for session to persist
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Verify session
+    const { data: sessionCheck } = await sb.auth.getSession();
+    console.log('Admin session check:', sessionCheck);
+
+    if (!sessionCheck?.session) {
+      msg.style.color = '#c00';
+      msg.textContent = 'Login succeeded but session not created. Clear browser cache/cookies and retry.';
+      return;
+    }
+
+    // Check admin role
+    msg.textContent = 'Checking admin role...';
+    const uid = sessionCheck.session.user.id;
+    
+    console.log('Checking role for user:', uid);
+    
+    const { data: prof, error: roleErr } = await sb
+      .from('profiles')
+      .select('role')
+      .eq('user_id', uid)
+      .maybeSingle();
+    
+    console.log('Role check result:', prof, roleErr);
+    
+    if (roleErr) {
+      msg.style.color = '#c00';
+      msg.textContent = 'Role check failed: ' + roleErr.message;
+      return;
+    }
+    
+    const userRole = prof?.role || 'staff';
+    
+    if (userRole !== 'admin') {
+      msg.style.color = '#c00';
+      msg.textContent = 'Access denied. Your role is: ' + userRole + '. Only admin users can access this page.';
+      await sb.auth.signOut();
+      return;
+    }
+
+    // Success
+    me = sessionCheck.session.user;
+    UI.who.textContent = me.email;
+    msg.style.color = '#0a0';
+    msg.textContent = 'Welcome, admin.';
+    
     showAdminUI(true);
     await load();
     await calcTotals();
+    
   } catch (err) {
     console.error('Admin login failed:', err);
-    msg.textContent = (err && err.message) || String(err);
+    msg.style.color = '#c00';
+    
+    if (err.message?.includes('Invalid login credentials')) {
+      msg.textContent = 'Invalid email or password.';
+    } else {
+      msg.textContent = err.message || String(err);
+    }
   }
 });
 
