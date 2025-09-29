@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>JulineMart • Staff</title>
 <link rel="icon" href="logo.png">
 <style>
@@ -10,33 +10,32 @@
   *{box-sizing:border-box}
   body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
   header{background:#0E141B;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
-  .brand{display:flex;gap:8px;align-items:center}
+  .brand{display:flex;gap:10px;align-items:center}
   .brand img{width:28px;height:28px;border-radius:6px}
-  .btn{cursor:pointer;padding:6px 10px;border-radius:8px;border:1px solid var(--jm-border);background:#fff}
+  .btn{cursor:pointer;padding:8px 10px;border-radius:8px;border:1px solid var(--jm-border);background:#fff}
   .btn.primary{background:var(--jm-primary);color:#fff;border-color:transparent}
-  .hidden{display:none !important}
-  main{max-width:1000px;margin:24px auto;padding:0 16px}
+  .btn[disabled]{opacity:.6;cursor:not-allowed}
+  main{max-width:1100px;margin:24px auto;padding:0 16px}
   .card{background:#fff;border:1px solid var(--jm-border);border-radius:12px;padding:16px;margin-bottom:16px}
   .row{display:flex;gap:8px;flex-wrap:wrap}
   .row>*{flex:1 1 220px}
   input,select,textarea{width:100%;padding:9px;border:1px solid #d8dbe0;border-radius:10px;font:inherit}
+  textarea{min-height:80px;resize:vertical}
   table{width:100%;border-collapse:collapse}
-  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
-  .pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px}
+  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
+  .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px}
   .Pending{background:#fff3cd;border:1px solid #ffe69c}
   .Approved{background:#d1e7dd;border:1px solid #a3cfbb}
   .Declined{background:#f8d7da;border:1px solid #f1aeb5}
   .Paid{background:#cff4fc;border:1px solid #9eeaf9}
-  /* one-line, compact filters; scroll horizontally on small screens */
-  .filters{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto}
-  .filters select,.filters input{height:32px}
-  .filters input[type="date"]{width:130px}
-  .filters input[type="search"]{width:220px}
+  .hidden{display:none !important}
 </style>
 </head>
 <body>
 <header>
-  <div class="brand"><img src="logo.png" alt=""><b>JulineMart • Staff</b></div>
+  <div class="brand">
+    <img src="logo.png" alt=""><b>JulineMart • Staff</b>
+  </div>
   <div>
     <span id="whoami"></span>
     <button id="btn-signout" class="btn hidden" type="button">Sign out</button>
@@ -44,197 +43,228 @@
 </header>
 
 <main>
-  <!-- Sign in / Register -->
-  <section id="signin-card" class="card">
+  <!-- Login/Register -->
+  <section id="auth" class="card">
     <h3>Staff Access</h3>
-    <div class="row">
-      <div><label>Full Name</label><input id="full_name" type="text" autocomplete="name" placeholder="Your name"></div>
-      <div><label>Email</label><input id="email" type="email" autocomplete="username" placeholder="you@julinemart.com"></div>
-      <div><label>Password</label><input id="password" type="password" autocomplete="current-password" placeholder="Enter password"></div>
-    </div>
-    <div class="row" style="margin-top:8px">
-      <button id="btn-login" class="btn primary" type="button">Log in</button>
-      <button id="btn-register" class="btn" type="button">Register</button>
-      <a href="admin.html" class="btn">Go to Admin</a>
-    </div>
-    <p id="signin-msg" style="color:#c00"></p>
-  </section>
-
-  <!-- New request -->
-  <section id="page-new" class="card hidden">
-    <h3>New Request</h3>
-    <div class="row">
-      <div><label>Type</label>
-        <select id="kind"><option value="petty_cash">Petty Cash (advance)</option><option value="reimbursement">Reimbursement</option></select>
+    <form id="staff-form" novalidate>
+      <div class="row">
+        <div><label>Email</label><input id="email" type="email" placeholder="you@julinemart.com" required></div>
+        <div><label>Password</label><input id="password" type="password" placeholder="Enter password" required></div>
       </div>
-      <div><label>Amount</label><input id="amount" type="number" min="0" step="0.01"></div>
-      <div><label>Currency</label><select id="currency"><option>GBP</option><option>NGN</option><option>USD</option><option>EUR</option></select></div>
-      <div><label>Needed by (optional)</label><input id="needed" type="date"></div>
-    </div>
-    <div><label>Description / Purpose</label><textarea id="description" placeholder="What is this for?"></textarea></div>
-    <div><label>Receipts</label><input id="receipts" type="file" multiple accept=".png,.jpg,.jpeg,.pdf"></div>
-    <button id="btn-submit" class="btn primary" style="margin-top:10px" type="button">Submit</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        <button id="btn-login" class="btn primary" type="submit">Log in</button>
+        <button id="btn-register" class="btn" type="button">Register</button>
+        <a href="admin.html" class="btn" style="text-decoration:none">Go to Admin</a>
+      </div>
+      <p id="signin-msg" style="color:#c00"></p>
+    </form>
   </section>
 
-  <!-- My requests -->
-  <section id="page-mine" class="card hidden">
-    <h3>My Requests</h3>
-    <div class="filters" style="margin-bottom:10px">
-      <select id="f-status"><option value="">Status: All</option><option>Pending</option><option>Approved</option><option>Declined</option><option>Paid</option></select>
-      <input id="f-from" type="date"><input id="f-to" type="date">
-      <input id="f-desc" type="search" placeholder="Search description">
-      <button id="btn-apply" class="btn" type="button">Apply</button>
-      <button id="btn-clear" class="btn" type="button">Clear</button>
+  <!-- New Request -->
+  <section id="new-request" class="card hidden">
+    <h3>New Request</h3>
+    <form id="request-form" novalidate>
+      <div class="row">
+        <div>
+          <label>Type</label>
+          <select id="kind">
+            <option value="petty_cash">Petty Cash (advance)</option>
+            <option value="reimbursement">Reimbursement</option>
+          </select>
+        </div>
+        <div><label>Amount</label><input id="amount" type="number" step="0.01" min="0" value="0.00"></div>
+        <div>
+          <label>Currency</label>
+          <select id="currency">
+            <option>GBP</option><option>USD</option><option>EUR</option><option>NGN</option><option>KES</option>
+          </select>
+        </div>
+        <div><label>Needed by (optional)</label><input id="needed_by" type="date"></div>
+      </div>
+      <div class="row">
+        <div style="flex:1 1 100%">
+          <label>Description / Purpose</label>
+          <textarea id="description" placeholder="What is this for?"></textarea>
+        </div>
+      </div>
+      <div class="row">
+        <div style="flex:1 1 100%">
+          <label>Receipts / Supporting docs (PNG/JPG/PDF — you can select multiple)</label>
+          <input id="files" type="file" multiple accept=".png,.jpg,.jpeg,.pdf">
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <button id="btn-submit-request" class="btn primary" type="submit">Submit</button>
+      </div>
+      <p id="request-msg" style="color:#0a0"></p>
+    </form>
+  </section>
+
+  <!-- My Requests -->
+  <section id="my-requests" class="card hidden">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between">
+      <h3 style="margin:0">My Requests</h3>
+      <div class="row" style="margin:0;flex: 1 1 auto;align-items:center">
+        <div style="flex:0 0 180px"><select id="mf-status"><option value="">Status: All</option><option>Pending</option><option>Approved</option><option>Declined</option><option>Paid</option></select></div>
+        <div style="flex:0 0 150px"><input id="mf-from" type="date"></div>
+        <div style="flex:0 0 150px"><input id="mf-to" type="date"></div>
+        <div style="flex:1 1 240px"><input id="mf-search" type="search" placeholder="Search description..."></div>
+        <div style="flex:0 0 auto"><button id="mf-apply" class="btn" type="button">Apply</button></div>
+        <div style="flex:0 0 auto"><button id="mf-clear" class="btn" type="button">Clear</button></div>
+        <div style="flex:0 0 auto"><button id="mf-refresh" class="btn" type="button">Refresh</button></div>
+      </div>
     </div>
-    <table id="mine-table">
-      <thead><tr><th>Date</th><th>Status</th><th>Amount</th><th>Comment</th></tr></thead>
-      <tbody></tbody>
-    </table>
+    <div style="margin-top:10px">
+      <table id="req-table">
+        <thead><tr><th>Date</th><th>Status</th><th>Amount</th><th>Comment</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </section>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
-/* Supabase client */
 const sb = supabase.createClient(
   "https://hmguraxzebhspednbbav.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o"
 );
 
-const $ = id => document.getElementById(id);
-const UI = {
-  signin: $('signin-card'), who: $('whoami'), signout: $('btn-signout'),
-  pageNew: $('page-new'), pageMine: $('page-mine'),
-  tbody: document.querySelector('#mine-table tbody'), msg: $('signin-msg'),
-};
-let currentUser = null;
+const $=(id)=>document.getElementById(id);
+const UI={auth:$('auth'), form:$('staff-form'), msg:$('signin-msg'),
+          who:$('whoami'), out:$('btn-signout'),
+          newReq:$('new-request'), my:$('my-requests'),
+          rForm:$('request-form'), rMsg:$('request-msg'),
+          tbody:document.querySelector('#req-table tbody')};
+let me=null;
 
-/* ---------- UI toggle ---------- */
-function setLoggedInUI(isIn){
-  UI.signin.classList.toggle('hidden', isIn);
-  UI.pageNew.classList.toggle('hidden', !isIn);
-  UI.pageMine.classList.toggle('hidden', !isIn);
-  UI.signout.classList.toggle('hidden', !isIn);
+function setLoggedInUI(on){
+  UI.auth.classList.toggle('hidden', on);
+  UI.newReq.classList.toggle('hidden', !on);
+  UI.my.classList.toggle('hidden', !on);
+  UI.out.classList.toggle('hidden', !on);
 }
 
-/* ---------- Session/init ---------- */
-async function getDisplayName(uid, fallback){
-  const { data } = await sb.from('profiles').select('full_name,email').eq('user_id',uid).maybeSingle();
-  return (data?.full_name && data.full_name.trim()) || data?.email || fallback || (uid||'').slice(0,8);
-}
 async function readSessionAndRender(){
-  const { data:{session} } = await sb.auth.getSession();
-  currentUser = session?.user ?? null;
-  if(currentUser){
-    UI.who.textContent = await getDisplayName(currentUser.id, currentUser.email);
-    setLoggedInUI(true);
-    loadMine();
-    subscribeRealtime();
-  }else{
-    UI.who.textContent = '';
-    setLoggedInUI(false);
-  }
+  const {data:{session}}=await sb.auth.getSession();
+  me=session?.user||null;
+  if(!me){ UI.who.textContent=''; setLoggedInUI(false); return; }
+  UI.who.textContent = me.email;
+  setLoggedInUI(true);
+  await loadMyRequests();
 }
-sb.auth.onAuthStateChange(readSessionAndRender);
-readSessionAndRender();
+sb.auth.onAuthStateChange(readSessionAndRender); readSessionAndRender();
 
-/* ---------- Auth ---------- */
-$('btn-login').onclick = async ()=>{
-  UI.msg.textContent='';
-  const email=$('email').value.trim(), password=$('password').value.trim();
-  if(!email||!password){ UI.msg.textContent='Enter email & password.'; return; }
-  const { error } = await sb.auth.signInWithPassword({ email, password });
-  if(error){ UI.msg.textContent=error.message; return; }
-  setLoggedInUI(true); readSessionAndRender();
+/* Login */
+UI.form.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  UI.msg.textContent='Logging in…';
+  try{
+    const email=$('email').value.trim(), pw=$('password').value.trim();
+    if(!email||!pw){ UI.msg.textContent='Enter email & password.'; return; }
+    const {error}=await sb.auth.signInWithPassword({email,password:pw});
+    if(error) throw error;
+    const {data:s}=await sb.auth.getSession();
+    if(!s?.session){ UI.msg.textContent='Logged in, but no session. Clear cache/service worker.'; return; }
+    UI.msg.textContent='Welcome.'; setLoggedInUI(true); await readSessionAndRender();
+  }catch(err){ console.error(err); UI.msg.textContent=(err&&err.message)||String(err); }
+});
+
+/* Register */
+$('btn-register').onclick=async(e)=>{
+  e.preventDefault();
+  UI.msg.textContent='Registering…';
+  try{
+    const email=$('email').value.trim(), pw=$('password').value.trim();
+    if(!email||!pw){ UI.msg.textContent='Enter email & password.'; return; }
+    const {data, error}=await sb.auth.signUp({email,password:pw});
+    if(error) throw error;
+    const {data:s}=await sb.auth.getSession();
+    if(s?.session){ UI.msg.textContent='Registered & signed in.'; setLoggedInUI(true); await readSessionAndRender(); }
+    else { UI.msg.textContent='Registered. Please log in.'; }
+  }catch(err){ console.error(err); UI.msg.textContent=(err&&err.message)||String(err); }
 };
 
-$('btn-register').onclick = async ()=>{
-  UI.msg.textContent='';
-  const full_name=$('full_name').value.trim();
-  const email=$('email').value.trim();
-  const password=$('password').value.trim();
-  if(!full_name || !email || !password){ UI.msg.textContent='Enter name, email & password.'; return; }
-  const { data, error } = await sb.auth.signUp({ email, password });
-  if(error){ UI.msg.textContent=error.message; return; }
-  if(data?.user){
-    // Store name & email in profiles (idempotent)
-    await sb.from('profiles').upsert({ user_id: data.user.id, full_name, email }, { onConflict: 'user_id' });
-  }
-  if(data?.session){ setLoggedInUI(true); readSessionAndRender(); }
-  else { UI.msg.textContent='Registered! Please log in.'; }
-};
+/* Sign out */
+UI.out.onclick=async()=>{ await sb.auth.signOut(); setLoggedInUI(false); location.reload(); };
 
-UI.signout.onclick = async ()=>{ await sb.auth.signOut(); setLoggedInUI(false); location.reload(); };
+/* Submit new request + receipts */
+UI.rForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  UI.rMsg.style.color='#0a0'; UI.rMsg.textContent='Submitting…';
+  try{
+    const rec={ kind:$('kind').value, amount: Number($('amount').value||0), currency:$('currency').value,
+                needed_by:$('needed_by').value||null, description:$('description').value.trim()||null, status:'Pending' };
+    const {data:ins, error} = await sb.from('requests').insert(rec).select('id').single();
+    if(error) throw error;
+    const reqId = ins.id;
 
-/* ---------- Submit request ---------- */
-$('btn-submit').onclick = async ()=>{
-  if(!currentUser){ UI.msg.textContent='Please log in.'; return; }
-  const kind=$('kind').value, amount=Number($('amount').value), currency=$('currency').value,
-        needed=$('needed').value||null, desc=$('description').value.trim();
-  if(!(amount>0) || !desc){ alert('Enter amount and description.'); return; }
-  const { data:req, error } = await sb.from('requests')
-    .insert({ user_id: currentUser.id, kind, amount, currency, needed_by: needed, description: desc })
-    .select().single();
-  if(error){ alert(error.message); return; }
-  // upload receipts
-  for(const f of $('receipts').files){
-    const path = `${currentUser.id}/${Date.now()}-${f.name}`;
-    await sb.storage.from('receipts').upload(path, f);
-    await sb.from('request_notes').insert({ request_id: req.id, author_id: currentUser.id, note: 'receipt:'+path });
-  }
-  $('amount').value=''; $('description').value=''; $('receipts').value='';
-  loadMine();
-};
+    // upload files and store notes as "receipt:<path>"
+    const files = $('files').files;
+    for (const f of files) {
+      const path = `${me.id}/${reqId}/${Date.now()}-${f.name}`;
+      const { error: upErr } = await sb.storage.from('receipts').upload(path, f, { upsert:false });
+      if (!upErr) await sb.from('request_notes').insert({ request_id:reqId, author_id:me.id, note:`receipt:${path}` });
+    }
+    UI.rMsg.textContent='Request submitted.';
+    UI.rForm.reset(); $('amount').value='0.00';
+    await loadMyRequests();
+  }catch(err){ UI.rMsg.style.color='#c00'; UI.rMsg.textContent=(err&&err.message)||String(err); }
+});
 
-/* ---------- My Requests ---------- */
+/* My requests list */
 function pill(s){return `<span class="pill ${s}">${s}</span>`;}
 function fmt(a,c){return `${c} ${Number(a||0).toFixed(2)}`;}
-async function latestAdminComment(requestId){
-  const { data } = await sb.from('request_notes')
-    .select('note,created_at').eq('request_id',requestId)
-    .order('created_at',{ascending:false}).limit(20);
-  if(!data) return '';
-  const human = data.filter(n => n.note && !n.note.startsWith('receipt:') && !n.note.startsWith('Status ->'));
-  return human.length ? human[0].note : '';
-}
-async function loadMine(filters={}){
-  if(!currentUser) return;
-  let q=sb.from('requests').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
-  if(filters.status) q=q.eq('status',filters.status);
-  if(filters.from) q=q.gte('created_at',filters.from+'T00:00:00Z');
-  if(filters.to) q=q.lte('created_at',filters.to+'T23:59:59Z');
-  if(filters.desc) q=q.ilike('description','%'+filters.desc+'%');
-  const { data, error } = await q;
-  if(error){ UI.tbody.innerHTML=`<tr><td colspan="4">${error.message}</td></tr>`; return; }
-  UI.tbody.innerHTML='';
-  for(const r of (data||[])){
-    const comment = await latestAdminComment(r.id);
-    UI.tbody.insertAdjacentHTML('beforeend',`
-      <tr>
-        <td>${new Date(r.created_at).toLocaleDateString()}</td>
-        <td>${pill(r.status)}</td>
-        <td>${fmt(r.amount,r.currency)}</td>
-        <td>${comment||''}</td>
-      </tr>`);
-  }
-}
-$('btn-apply').onclick = ()=> loadMine({
-  status:$('f-status').value||null,
-  from:$('f-from').value||null,
-  to:$('f-to').value||null,
-  desc:$('f-desc').value.trim()||null
-});
-$('btn-clear').onclick = ()=>{ $('f-status').value=''; $('f-from').value=''; $('f-to').value=''; $('f-desc').value=''; loadMine(); };
 
-/* realtime refresh */
-let rt=null;
-function subscribeRealtime(){
-  if(rt) sb.removeChannel(rt);
-  rt = sb.channel('mine-'+currentUser.id)
-    .on('postgres_changes',{event:'*',schema:'public',table:'requests',filter:`user_id=eq.${currentUser.id}`}, ()=>loadMine())
-    .on('postgres_changes',{event:'*',schema:'public',table:'request_notes'}, ()=>loadMine())
-    .subscribe();
+function readMyFilters(){ return { status:$('mf-status').value||null, from:$('mf-from').value||null, to:$('mf-to').value||null, q:$('mf-search').value.trim()||null }; }
+
+async function latestAdminReason(request_id){
+  // pick latest note that is NOT "receipt:*" and NOT "Status -> *"
+  const { data, error } = await sb
+    .from('request_notes')
+    .select('note,created_at')
+    .eq('request_id', request_id)
+    .not('note', 'ilike', 'receipt:%')
+    .not('note', 'ilike', 'Status ->%')
+    .order('created_at', { ascending:false })
+    .limit(1);
+  if (error) return '';
+  return (data && data[0]?.note) || '';
 }
+
+let LOAD_TOKEN=0;
+async function loadMyRequests(f=readMyFilters()){
+  if(!me){ UI.tbody.innerHTML=''; return; }
+  const token=++LOAD_TOKEN;
+  UI.tbody.innerHTML='<tr><td colspan="4">Loading…</td></tr>';
+  try{
+    let q=sb.from('requests').select('*').eq('user_id',me.id).order('created_at',{ascending:false});
+    if(f.status) q=q.eq('status',f.status);
+    if(f.from) q=q.gte('created_at',f.from+'T00:00:00Z');
+    if(f.to)   q=q.lte('created_at',f.to+'T23:59:59Z');
+    if(f.q)    q=q.ilike('description','%'+f.q+'%');
+    const {data, error}=await q; if(error) throw error;
+    if(token!==LOAD_TOKEN) return;
+    UI.tbody.innerHTML='';
+    for(const r of (data||[])){
+      const reason = await latestAdminReason(r.id);
+      UI.tbody.insertAdjacentHTML('beforeend', `
+        <tr>
+          <td>${new Date(r.created_at).toLocaleDateString()}</td>
+          <td>${pill(r.status)}</td>
+          <td>${fmt(r.amount,r.currency)}</td>
+          <td>${reason?reason:''}</td>
+        </tr>
+      `);
+    }
+    if((data||[]).length===0){ UI.tbody.innerHTML='<tr><td colspan="4">No requests yet.</td></tr>'; }
+  }catch(err){ UI.tbody.innerHTML=`<tr><td colspan="4">${err.message||String(err)}</td></tr>`; }
+}
+
+/* filter events */
+$('mf-apply').onclick = ()=> loadMyRequests();
+$('mf-clear').onclick  = ()=> { $('mf-status').value=''; $('mf-from').value=''; $('mf-to').value=''; $('mf-search').value=''; loadMyRequests(); };
+$('mf-refresh').onclick= ()=> loadMyRequests();
 </script>
 </body>
 </html>
