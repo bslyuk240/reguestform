@@ -141,18 +141,47 @@ async function init(){
 sb.auth.onAuthStateChange(init); init();
 
 /* Login */
-UI.form.addEventListener('submit', async (e)=>{
+const form = document.getElementById('admin-form');
+const msg  = document.getElementById('auth-msg');
+
+form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  UI.msg.textContent='Logging in…';
-  try{
-    const email=UI.email.value.trim(), pw=UI.password.value.trim();
-    if(!email||!pw){ UI.msg.textContent='Enter email & password.'; return; }
-    const {data, error}=await sb.auth.signInWithPassword({email,password:pw});
-    if(error) throw error;
-    const {data:s}=await sb.auth.getSession();
-    if(!s?.session){ UI.msg.textContent='Logged in, but no session was created. Clear cache/service worker.'; return; }
-    UI.msg.textContent='Welcome.'; showAdminUI(true); await init();
-  }catch(err){ console.error(err); UI.msg.textContent=(err&&err.message)||String(err); }
+  msg.textContent = 'Logging in…';
+  try {
+    const email = document.getElementById('email').value.trim();
+    const pw    = document.getElementById('password').value.trim();
+    if (!email || !pw) { msg.textContent = 'Enter email & password.'; return; }
+
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+    if (error) throw error;
+
+    // Use the session we already have, don’t wait on getSession
+    const session = data?.session;
+    if (!session) {
+      // Fallback: read once (some browsers delay writes)
+      const g = await sb.auth.getSession();
+      if (!g?.data?.session) {
+        msg.textContent = 'Logged in, but no session was created. Clear cache/service worker and retry.';
+        return;
+      }
+    }
+
+    // Role check -> show UI right away
+    msg.textContent = 'Checking admin role…';
+    const uid = (data?.session?.user?.id) || (await sb.auth.getUser()).data?.user?.id;
+    const { data: prof, error: roleErr } = await sb.from('profiles')
+      .select('role').eq('user_id', uid).maybeSingle();
+    if (roleErr) { msg.textContent = 'Role check failed: ' + roleErr.message; return; }
+    if ((prof?.role || 'staff') !== 'admin') { msg.textContent = 'Access denied (not admin).'; return; }
+
+    msg.textContent = 'Welcome.';
+    showAdminUI(true);
+    await load();
+    await calcTotals();
+  } catch (err) {
+    console.error('Admin login failed:', err);
+    msg.textContent = (err && err.message) || String(err);
+  }
 });
 
 /* Sign out */
