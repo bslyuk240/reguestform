@@ -125,7 +125,6 @@
   </section>
 </main>
 
-<!-- Supabase UMD -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 /* Supabase client */
@@ -156,7 +155,11 @@ async function init(){
   if(currentUser){
     whoami.textContent = currentUser.email;
     btnSignout.classList.remove('hidden');
-    show(pageNew);
+
+    // show both sections when logged in
+    pageNew.classList.remove('hidden');
+    pageMine.classList.remove('hidden');
+
     loadMine();
     enableRealtime();
   }else{
@@ -253,13 +256,12 @@ el('submit-request').onclick = async (e)=>{
 function pill(s){ return `<span class="pill ${s}">${s}</span>`; }
 function fmt(a,c){ return `${c} ${Number(a).toFixed(2)}`; }
 async function latestAdminComment(requestId){
-  const { data, error } = await sb.from('request_notes')
+  const { data } = await sb.from('request_notes')
     .select('note, created_at')
     .eq('request_id', requestId)
     .order('created_at', { ascending:false })
     .limit(10);
-  if(error || !data) return '';
-  const comments = data.filter(n => !n.note.startsWith('receipt:'));
+  const comments = (data||[]).filter(n => !n.note.startsWith('receipt:'));
   return comments.length ? comments[0].note : '';
 }
 
@@ -299,7 +301,7 @@ async function loadMine(filters={}){
   }
 }
 
-/* PWA (kept) */
+/* PWA (kept, harmless if file not present) */
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js').catch(()=>{}); }
 </script>
 </body>
