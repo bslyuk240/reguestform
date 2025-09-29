@@ -44,7 +44,7 @@
 </header>
 
 <main>
-  <!-- Login (shown by default) -->
+  <!-- Login -->
   <section id="auth" class="card">
     <h3>Admin sign-in</h3>
     <form id="admin-form" novalidate>
@@ -66,7 +66,7 @@
     </form>
   </section>
 
-  <!-- Filters + totals (hidden until admin session) -->
+  <!-- Filters + totals -->
   <section id="admin-top" class="card hidden" style="display:flex;justify-content:space-between;align-items:center">
     <div>
       <h3 style="margin:0">All Requests</h3>
@@ -85,7 +85,7 @@
     </div>
   </section>
 
-  <!-- Table (hidden until admin session) -->
+  <!-- Table -->
   <section id="admin-table-wrap" class="card hidden">
     <table id="admin-table">
       <thead><tr><th>Date</th><th>Staff</th><th>Type</th><th>Description</th><th>Amount</th><th>Status</th><th>Action</th><th>Receipt</th></tr></thead>
@@ -97,143 +97,92 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="totals.js"></script>
 <script>
-/* ====== Safe totals helper (fallback if totals.js missing) ====== */
+/* Fallback if totals.js not present */
 const JT = window.JMTotals || {
-  summarizePaidTotals: (rows)=> (rows||[]).reduce((m,r)=>{const c=(String(r?.currency??'').trim()||'UNK'); const a=Number(r?.amount??0)||0; m[c]=(m[c]||0)+a; return m;},{}),
-  formatPaidTotalsLabel: (totals)=>{ const e=Object.entries(totals||{}); return e.length ? 'Totals: '+e.map(([c,s])=>`${c} ${s.toFixed(2)}`).join(' • ') : 'Totals: 0'; }
+  summarizePaidTotals: rows => (rows||[]).reduce((m,r)=>{const c=(String(r?.currency??'').trim()||'UNK'); const a=Number(r?.amount??0)||0; m[c]=(m[c]||0)+a; return m;},{}),
+  formatPaidTotalsLabel: t => { const e=Object.entries(t||{}); return e.length ? 'Totals: '+e.map(([c,s])=>`${c} ${s.toFixed(2)}`).join(' • ') : 'Totals: 0'; }
 };
-/* =============================================================== */
 
 const sb = supabase.createClient(
   "https://hmguraxzebhspednbbav.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o"
 );
 
-const $ = (id)=>document.getElementById(id);
-const UI = {
-  who: $('whoami'), out: $('btn-signout'),
-  auth: $('auth'), msg: $('auth-msg'),
-  top: $('admin-top'), wrap: $('admin-table-wrap'),
-  tbody: document.querySelector('#admin-table tbody'),
-  totals: $('paid-totals'),
-  form: $('admin-form'),
-  email: $('email'),
-  password: $('password')
-};
-let me = null;
+const $=(id)=>document.getElementById(id);
+const UI={who:$('whoami'),out:$('btn-signout'),auth:$('auth'),msg:$('auth-msg'),
+          top:$('admin-top'),wrap:$('admin-table-wrap'),tbody:document.querySelector('#admin-table tbody'),
+          totals:$('paid-totals'),form:$('admin-form'),email:$('email'),password:$('password')};
+let me=null;
 
-/* force-hide admin areas on initial load */
 UI.top.classList.add('hidden'); UI.wrap.classList.add('hidden'); UI.out.classList.add('hidden');
-function showAdminUI(show){
-  UI.auth.classList.toggle('hidden', show);
-  UI.top.classList.toggle('hidden', !show);
-  UI.wrap.classList.toggle('hidden', !show);
-  UI.out.classList.toggle('hidden', !show);
-}
+function showAdminUI(show){ UI.auth.classList.toggle('hidden',show); UI.top.classList.toggle('hidden',!show); UI.wrap.classList.toggle('hidden',!show); UI.out.classList.toggle('hidden',!show); }
 
-/* ===== Init + role check ===== */
 async function init(){
-  const { data:{session} } = await sb.auth.getSession();
-  me = session?.user || null;
+  const {data:{session}, error:sErr}=await sb.auth.getSession();
+  if(sErr){ UI.msg.textContent='Session error: '+sErr.message; return; }
+  me=session?.user||null;
+  if(!me){ UI.who.textContent=''; showAdminUI(false); return; }
 
-  if(!me){
-    UI.who.textContent=''; showAdminUI(false); return;
-  }
-
-  UI.who.textContent = me.email;
-  const { data: prof } = await sb.from('profiles').select('role').eq('user_id', me.id).maybeSingle();
-  if((prof?.role || 'staff') !== 'admin'){
-    UI.msg.textContent = 'Access denied (not admin).';
-    showAdminUI(false);
-    await sb.auth.signOut();
-    return;
-  }
+  UI.who.textContent=me.email;
+  const {data:prof, error:rErr}=await sb.from('profiles').select('role').eq('user_id',me.id).maybeSingle();
+  if(rErr){ UI.msg.textContent='Role check failed: '+rErr.message; showAdminUI(false); return; }
+  if((prof?.role||'staff')!=='admin'){ UI.msg.textContent='Access denied (not admin).'; showAdminUI(false); await sb.auth.signOut(); return; }
 
   showAdminUI(true);
   await load(); calcTotals();
 }
-sb.auth.onAuthStateChange(init);
-init();
+sb.auth.onAuthStateChange(init); init();
 
-/* ===== Login via FORM submit ===== */
+/* Login */
 UI.form.addEventListener('submit', async (e)=>{
   e.preventDefault();
-  UI.msg.textContent = '';
+  UI.msg.textContent='Logging in…';
   try{
-    const email = UI.email.value.trim();
-    const pw = UI.password.value.trim();
-    if(!email || !pw){ UI.msg.textContent = 'Enter email & password.'; return; }
-    const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+    const email=UI.email.value.trim(), pw=UI.password.value.trim();
+    if(!email||!pw){ UI.msg.textContent='Enter email & password.'; return; }
+    const {data, error}=await sb.auth.signInWithPassword({email,password:pw});
     if(error) throw error;
-    // onAuthStateChange will call init(); flip UI immediately too
-    showAdminUI(true);
-  }catch(err){
-    console.error('Login failed:', err);
-    UI.msg.textContent = '❌ ' + (err?.message || 'Login error');
-  }
+    const {data:s}=await sb.auth.getSession();
+    if(!s?.session){ UI.msg.textContent='Logged in, but no session was created. Clear cache/service worker.'; return; }
+    UI.msg.textContent='Welcome.'; showAdminUI(true); await init();
+  }catch(err){ console.error(err); UI.msg.textContent=(err&&err.message)||String(err); }
 });
 
-/* ===== Sign out ===== */
-UI.out.onclick = async ()=>{
-  try { await sb.auth.signOut(); }
-  finally {
-    showAdminUI(false);
-    location.href = 'staff.html';
-  }
-};
+/* Sign out */
+UI.out.onclick=async()=>{ try{ await sb.auth.signOut(); } finally { showAdminUI(false); location.href='staff.html'; } };
 
-/* ===== Helpers ===== */
+/* Helpers */
 function pill(s){return `<span class="pill ${s}">${s}</span>`;}
 function fmt(a,c){return `${c} ${Number(a||0).toFixed(2)}`;}
 async function signedUrl(path){ if(!path) return ''; const {data}=await sb.storage.from('receipts').createSignedUrl(path,600); return data?.signedUrl||''; }
 const nameCache=new Map();
-async function nameFor(user_id){
-  if(nameCache.has(user_id)) return nameCache.get(user_id);
-  const { data } = await sb.from('profiles').select('full_name,email').eq('user_id',user_id).maybeSingle();
+async function nameFor(user_id){ if(nameCache.has(user_id)) return nameCache.get(user_id);
+  const {data}=await sb.from('profiles').select('full_name,email').eq('user_id',user_id).maybeSingle();
   const name=(data?.full_name&&data.full_name.trim())||data?.email||(user_id||'').slice(0,8);
-  nameCache.set(user_id,name);
-  return name;
-}
+  nameCache.set(user_id,name); return name; }
 function escapeHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
-/* ===== Data ===== */
-function readFilters(){ return {
-  status: $('f-status').value || null,
-  kind:   $('f-kind').value   || null,
-  from:   $('f-from').value   || null,
-  to:     $('f-to').value     || null
-};}
-
-async function fetchRequests(f={}){
-  let q=sb.from('requests').select('*').order('created_at',{ascending:false});
-  if(f.status) q=q.eq('status',f.status);
-  if(f.kind) q=q.eq('kind',f.kind);
-  if(f.from) q=q.gte('created_at',f.from+'T00:00:00Z');
-  if(f.to) q=q.lte('created_at',f.to+'T23:59:59Z');
-  const { data, error } = await q;
-  if(error) throw error;
-  return data||[];
-}
+/* Data */
+function readFilters(){ return { status:$('f-status').value||null, kind:$('f-kind').value||null, from:$('f-from').value||null, to:$('f-to').value||null }; }
+async function fetchRequests(f={}){ let q=sb.from('requests').select('*').order('created_at',{ascending:false});
+  if(f.status) q=q.eq('status',f.status); if(f.kind) q=q.eq('kind',f.kind);
+  if(f.from) q=q.gte('created_at',f.from+'T00:00:00Z'); if(f.to) q=q.lte('created_at',f.to+'T23:59:59Z');
+  const {data,error}=await q; if(error) throw error; return data||[]; }
 
 let LOAD_TOKEN=0;
 async function load(f=readFilters()){
-  const token=++LOAD_TOKEN;
-  UI.tbody.innerHTML='<tr><td colspan="8">Loading…</td></tr>';
+  const token=++LOAD_TOKEN; UI.tbody.innerHTML='<tr><td colspan="8">Loading…</td></tr>';
   try{
-    const rows=await fetchRequests(f);
-    if(token!==LOAD_TOKEN) return;
-    UI.tbody.innerHTML='';
+    const rows=await fetchRequests(f); if(token!==LOAD_TOKEN) return; UI.tbody.innerHTML='';
     for(const r of rows){
-      const staff = await nameFor(r.user_id);
-      const { data:notes } = await sb.from('request_notes').select('note').eq('request_id',r.id);
+      const staff=await nameFor(r.user_id);
+      const {data:notes}=await sb.from('request_notes').select('note').eq('request_id',r.id);
       const rec=(notes||[]).find(n=>typeof n.note==='string' && n.note.startsWith('receipt:'));
-      const link = rec ? `<a target="_blank" rel="noopener" href="${await signedUrl(rec.note.replace('receipt:',''))}">View</a>` : '';
-
+      const link=rec?`<a target="_blank" rel="noopener" href="${await signedUrl(rec.note.replace('receipt:',''))}">View</a>`:'';
       const sel=`sel-${r.id}`, com=`com-${r.id}`, btn=`btn-${r.id}`;
       const options=['Pending','Approved','Declined','Paid'].map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('');
-      const descSafe = escapeHtml(r.description||'');
-
-      UI.tbody.insertAdjacentHTML('beforeend', `
+      const descSafe=escapeHtml(r.description||'');
+      UI.tbody.insertAdjacentHTML('beforeend',`
         <tr>
           <td>${new Date(r.created_at).toLocaleDateString()}</td>
           <td>${staff}</td>
@@ -249,57 +198,46 @@ async function load(f=readFilters()){
             </div>
           </td>
           <td>${link}</td>
-        </tr>
-      `);
-
-      document.getElementById(btn).onclick = ()=> updateStatus(
-        r.id, document.getElementById(sel).value, document.getElementById(com).value.trim()
-      );
+        </tr>`);
+      document.getElementById(btn).onclick=()=>updateStatus(r.id,document.getElementById(sel).value,document.getElementById(com).value.trim());
     }
-  }catch(err){
-    UI.tbody.innerHTML = `<tr><td colspan="8">${err.message||String(err)}</td></tr>`;
-  }
+  }catch(err){ UI.tbody.innerHTML=`<tr><td colspan="8">${err.message||String(err)}</td></tr>`; }
 }
 
-/* ===== Update ===== */
 async function updateStatus(id,next,comment){
   try{
     if(next==='Paid'){
-      const method = prompt('Payment method (e.g., Transfer, Cash, PayPal):','Transfer'); if(method===null) return;
-      const reference = prompt('Reference / Transaction ID:','');
-      await sb.from('payouts').insert({ request_id:id, paid_by:me.id, method, reference });
+      const method=prompt('Payment method (e.g., Transfer, Cash, PayPal):','Transfer'); if(method===null) return;
+      const reference=prompt('Reference / Transaction ID:','');
+      await sb.from('payouts').insert({request_id:id,paid_by:me.id,method,reference});
     }
-    await sb.from('requests').update({ status: next }).eq('id', id);
-    if(comment){ await sb.from('request_notes').insert({ request_id:id, author_id:me.id, note: comment }); }
-    await sb.from('request_notes').insert({ request_id:id, author_id:me.id, note:`Status -> ${next}` });
+    await sb.from('requests').update({status:next}).eq('id',id);
+    if(comment) await sb.from('request_notes').insert({request_id:id,author_id:me.id,note:comment});
+    await sb.from('request_notes').insert({request_id:id,author_id:me.id,note:`Status -> ${next}`});
     await load(); calcTotals();
   }catch(err){ alert(err.message||String(err)); }
 }
 
-/* ===== Totals ===== */
 async function calcTotals(){
   const f=readFilters();
   let q=sb.from('requests').select('amount,currency').eq('status','Paid');
-  if(f.from) q=q.gte('created_at', f.from+'T00:00:00Z');
-  if(f.to)   q=q.lte('created_at', f.to+'T23:59:59Z');
-  const { data, error } = await q;
-  if(error){ UI.totals.textContent='Totals: error'; return; }
+  if(f.from) q=q.gte('created_at',f.from+'T00:00:00Z');
+  if(f.to)   q=q.lte('created_at',f.to+'T23:59:59Z');
+  const {data,error}=await q; if(error){ UI.totals.textContent='Totals: error'; return; }
   const totals = JT.summarizePaidTotals(data||[]);
   UI.totals.textContent = JT.formatPaidTotalsLabel(totals);
 }
 
-/* ===== Filters + Export ===== */
+/* Filters + export */
 $('btn-filter').onclick=()=>{ load(); calcTotals(); };
 $('btn-clear').onclick =()=>{ $('f-status').value=''; $('f-kind').value=''; $('f-from').value=''; $('f-to').value=''; load(); calcTotals(); };
-$('btn-export').onclick=async()=>{
-  const { data, error } = await sb.from('requests').select('*').order('created_at',{ascending:false});
+$('btn-export').onclick=async()=>{ const {data,error}=await sb.from('requests').select('*').order('created_at',{ascending:false});
   if(error){ alert(error.message); return; }
   const rows=[['created_at','user_id','kind','description','amount','currency','needed_by','status','updated_at','id']];
   (data||[]).forEach(r=>rows.push([r.created_at,r.user_id,r.kind,r.description||'',r.amount,r.currency,r.needed_by||'',r.status,r.updated_at,r.id]));
-  const csv = rows.map(r=>r.map(x=>{ const s=String(x==null?'':x); return '"'+s.split('"').join('""')+'"'; }).join(',')).join('\n');
+  const csv=rows.map(r=>r.map(x=>{const s=String(x==null?'':x);return '"'+s.split('"').join('""')+'"';}).join(',')).join('\n');
   const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='julinemart_requests.csv'; a.click(); URL.revokeObjectURL(url);
-};
+  const a=document.createElement('a'); a.href=url; a.download='julinemart_requests.csv'; a.click(); URL.revokeObjectURL(url); };
 </script>
 </body>
 </html>
