@@ -134,7 +134,7 @@ async function init(){
   UI.stats.classList.remove('hidden'); show(UI.admin);
   await load(); calcPaid();
 }
-function initOnce(){ if(INITIALIZED) return; INITIALIZED=true; init(); }
+function initOnce(){ if(INITIALIZED) return; INITIALIZED = true; init(); }
 sb.auth.onAuthStateChange(()=>initOnce()); initOnce();
 
 UI.btnOut.onclick=async()=>{await sb.auth.signOut(); location.href='staff.html';};
@@ -146,17 +146,17 @@ function pill(s){return `<span class="pill ${s}">${s}</span>`;}
 function fmt(a,c){return `${c} ${Number(a).toFixed(2)}`;}
 async function signedUrl(path){if(!path)return'';const {data}=await sb.storage.from('receipts').createSignedUrl(path,600);return data?.signedUrl||'';}
 
-/* name lookup cache (avoids join issues) */
+/* Name lookup cache (no joins) */
 const nameCache=new Map();
 async function nameFor(user_id){
   if(nameCache.has(user_id)) return nameCache.get(user_id);
-  const { data, error } = await sb.from('profiles').select('full_name,email').eq('user_id',user_id).maybeSingle();
-  const name = data?.full_name || data?.email || (user_id||'').slice(0,8);
+  const { data } = await sb.from('profiles').select('full_name,email').eq('user_id',user_id).maybeSingle();
+  const name = (data?.full_name && data.full_name.trim()) || data?.email || (user_id||'').slice(0,8);
   nameCache.set(user_id,name);
   return name;
 }
 
-/* Fetch requests safely (no joins) */
+/* Fetch requests (no joins) */
 async function fetchRequests(filters={}){
   let q=sb.from('requests').select('*').order('created_at',{ascending:false});
   if(filters.status) q=q.eq('status',filters.status);
@@ -234,7 +234,7 @@ function readFilters(){ return {
 el('btn-filter').onclick=()=> load(readFilters());
 el('btn-clear').onclick=()=>{ el('f-status').value=''; el('f-kind').value=''; el('f-from').value=''; el('f-to').value=''; load({}); };
 
-/* Export CSV (no replaceAll for compatibility) */
+/* Export CSV */
 el('btn-export').onclick=async()=>{
   const { data, error } = await sb.from('requests').select('*').order('created_at',{ascending:false});
   if(error){ alert(error.message); return; }
