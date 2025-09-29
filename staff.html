@@ -40,13 +40,6 @@
   a.switch{color:var(--jm-primary);text-decoration:none}
   .foot-note{font-size:12px;color:#6b7280}
   .hidden{display:none}
-  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
-  /* simple modal for full history (optional access) */
-  dialog{border:0;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.2);max-width:560px;width:90%}
-  dialog::backdrop{background:rgba(0,0,0,.35)}
-  .history-list{max-height:300px;overflow:auto;border:1px solid #eee;border-radius:8px;padding:8px}
-  .history-item{padding:6px 4px;border-bottom:1px dashed #eee}
-  .history-item:last-child{border-bottom:0}
 </style>
 </head>
 <body>
@@ -108,11 +101,11 @@
     <p id="new-msg" class="foot-note"></p>
   </section>
 
-  <!-- MY REQUESTS (exact format: DATE … STATUS … AMOUNT … COMMENT) -->
+  <!-- MY REQUESTS (now includes COMMENT column with latest admin note) -->
   <section class="card hidden" id="page-mine">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <h3>My Requests</h3>
-      <div class="toolbar">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
         <select id="f-status">
           <option value="">Status: All</option>
           <option>Pending</option><option>Approved</option><option>Declined</option><option>Paid</option><option>Cancelled</option>
@@ -126,13 +119,13 @@
       </div>
     </div>
     <table id="mine-table">
-      <thead><tr><th>DATE</th><th>STATUS</th><th>AMOUNT</th><th>COMMENT</th></tr></thead>
+      <thead><tr><th>Date</th><th>Status</th><th>Amount</th><th>Comment</th></tr></thead>
       <tbody></tbody>
     </table>
-    <p class="foot-note" style="margin-top:10px">Tip: click a row to view full history.</p>
+    <p class="foot-note" style="margin-top:10px">Admin? <a class="switch" href="admin.html">Go to Admin</a></p>
   </section>
 
-  <!-- Paid History (kept as before) -->
+  <!-- Paid History (unchanged) -->
   <section class="card hidden" id="page-paid">
     <h3>Paid History (by month)</h3>
     <div style="overflow:auto">
@@ -144,19 +137,10 @@
   </section>
 </main>
 
-<!-- Full history modal -->
-<dialog id="dlg-history">
-  <h3>Request history</h3>
-  <div id="history-body" class="history-list"></div>
-  <div style="text-align:right;margin-top:10px">
-    <button id="btn-close" class="btn" type="button">Close</button>
-  </div>
-</dialog>
-
 <!-- Supabase UMD -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
-/* Supabase (your project) */
+/* Supabase */
 const sb = supabase.createClient(
   "https://hmguraxzebhspednbbav.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o"
@@ -165,15 +149,14 @@ const sb = supabase.createClient(
 const el = id => document.getElementById(id);
 const signinCard = el('signin-card'), pageNew = el('page-new'), pageMine = el('page-mine'), pagePaid = el('page-paid');
 const whoami = el('whoami'), btnSignout = el('btn-signout');
-const dlg = el('dlg-history'), histBody = el('history-body'), btnClose = el('btn-close');
-
 let currentUser = null;
+
+/* guards */
 let INITIALIZED = false;
 let LOAD_SEQ = 0;
 
 function show(section){ [signinCard,pageNew,pageMine,pagePaid].forEach(s=>s.classList.add('hidden')); section.classList.remove('hidden'); }
 btnSignout.onclick = async ()=>{ await sb.auth.signOut(); location.reload(); };
-btnClose.onclick = ()=> dlg.close();
 
 function setBusy(button, txt){ if(!button) return; button.dataset.prev = button.textContent; button.textContent = txt; button.disabled = true; }
 function clearBusy(button){ if(!button) return; button.disabled = false; button.textContent = button.dataset.prev || button.textContent; }
@@ -204,9 +187,8 @@ function enableRealtime(){
   try{
     if(rtChannel) sb.removeChannel(rtChannel);
     rtChannel = sb.channel('req-status-'+currentUser.id)
-      .on('postgres_changes',{ event:'*', schema:'public', table:'requests', filter:`user_id=eq.${currentUser.id}`}, payload=>{
-        loadMine(); loadPaidHistory();
-      }).subscribe();
+      .on('postgres_changes',{ event:'*', schema:'public', table:'requests', filter:`user_id=eq.${currentUser.id}`}, ()=>{ loadMine(); loadPaidHistory(); })
+      .subscribe();
   }catch(e){ console.warn('Realtime subscribe failed', e); }
 }
 
@@ -238,11 +220,12 @@ el('btn-register').onclick = async (e)=>{
     if(error) throw error;
     if(data && data.session){ location.reload(); }
     else { el('signin-msg').textContent = "Registered! Please log in."; }
-  }catch(err){ el('signin-msg').textContent = err.message || String(err); }
-  finally{ clearBusy(btn); }
+  }catch(err){
+    el('signin-msg').textContent = err.message || String(err);
+  }finally{ clearBusy(btn); }
 };
 
-/* ====== Upload many receipts ====== */
+/* ====== Upload receipts ====== */
 async function uploadOne(file){
   const ext=(file.name.split('.').pop()||'bin').toLowerCase();
   const path=`receipts/${currentUser.id}/${crypto.randomUUID()}.${ext}`;
@@ -280,29 +263,18 @@ el('submit-request').onclick = async (e)=>{
   }catch(err){ el('new-msg').textContent = err.message || String(err); }
 };
 
-/* ====== Helpers for list ====== */
+/* ====== Helpers ====== */
 function pill(s){ return `<span class="pill ${s}">${s}</span>`; }
 function fmt(a,c){ return `${c} ${Number(a).toFixed(2)}`; }
-
-async function latestComment(requestId){
-  // latest non-receipt note, most recent first
+async function latestAdminComment(requestId){
   const { data, error } = await sb.from('request_notes')
-    .select('note, created_at, author_id')
+    .select('note, created_at')
     .eq('request_id', requestId)
     .order('created_at', { ascending:false })
     .limit(10);
-  if(error || !data || !data.length) return 'Awaiting review';
-  const candidates = data.filter(n => !n.note.startsWith('receipt:'));
-  if(!candidates.length) return 'Awaiting review';
-  return candidates[0].note;
-}
-
-async function fullHistory(requestId){
-  const { data, error } = await sb.from('request_notes')
-    .select('note, created_at, author_id')
-    .eq('request_id', requestId)
-    .order('created_at', { ascending:true });
-  return error ? [] : data;
+  if(error || !data) return '';
+  const comments = data.filter(n => !n.note.startsWith('receipt:'));
+  return comments.length ? comments[0].note : '';
 }
 
 /* ====== Filters ====== */
@@ -311,7 +283,7 @@ el('btn-clear').onclick = ()=>{ el('f-status').value=''; el('f-from').value=''; 
 el('btn-refresh').onclick = ()=> loadMine(readFilters());
 function readFilters(){ return { status:el('f-status').value||null, from:el('f-from').value||null, to:el('f-to').value||null, q:el('f-q').value.trim()||null }; }
 
-/* ====== Load list (DATE … STATUS … AMOUNT … COMMENT) ====== */
+/* ====== Load list (with Comment column) ====== */
 async function loadMine(filters={}){
   const seq = ++LOAD_SEQ;
   const tbody=document.querySelector('#mine-table tbody');
@@ -329,34 +301,16 @@ async function loadMine(filters={}){
 
   tbody.innerHTML='';
   for (const r of data){
-    const comment = await latestComment(r.id);
-    const rowHtml = `
-      <tr data-id="${r.id}" style="cursor:pointer">
+    const comment = await latestAdminComment(r.id);
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr>
         <td>${new Date(r.created_at).toLocaleDateString()}</td>
         <td>${pill(r.status)}</td>
         <td>${fmt(r.amount,r.currency)}</td>
-        <td>${comment}</td>
+        <td>${comment || ''}</td>
       </tr>
-    `;
-    tbody.insertAdjacentHTML('beforeend', rowHtml);
+    `);
   }
-
-  // click row -> open full history
-  tbody.querySelectorAll('tr[data-id]').forEach(tr=>{
-    tr.onclick = async ()=>{
-      const rid = tr.getAttribute('data-id');
-      const notes = await fullHistory(rid);
-      histBody.innerHTML = notes.length ? '' : '<div class="history-item">No history yet.</div>';
-      notes.forEach(n=>{
-        const d = new Date(n.created_at).toLocaleString();
-        histBody.insertAdjacentHTML('beforeend', `<div class="history-item"><b>${d}</b> — ${n.note}</div>`);
-      });
-      dlg.showModal();
-    };
-  });
-
-  // show Paid history card too
-  pagePaid.classList.remove('hidden');
 }
 
 /* ====== Paid History (monthly) ====== */
@@ -382,12 +336,12 @@ async function loadPaidHistory(){
   for(const [ym, total] of rows){
     tbody.insertAdjacentHTML('beforeend', `<tr><td>${ym}</td><td>GBP ${total.toFixed(2)}</td></tr>`);
   }
+
+  pagePaid.classList.remove('hidden');
 }
 
 /* PWA */
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('service-worker.js').catch(()=>{});
-}
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js').catch(()=>{}); }
 </script>
 </body>
 </html>
