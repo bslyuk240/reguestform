@@ -1,132 +1,81 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>JulineMart • Staff</title>
 <link rel="icon" href="logo.png">
-<link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#0E141B">
 <style>
-  :root{--jm-primary:#08A045; --jm-dark:#0E141B; --jm-bg:#F6F8FA; --jm-border:#E7EAEE;
-        --pill-pending:#fff3cd; --pill-pending-b:#ffe69c; --pill-approved:#d1e7dd; --pill-approved-b:#a3cfbb;
-        --pill-declined:#f8d7da; --pill-declined-b:#f1aeb5; --pill-paid:#cff4fc; --pill-paid-b:#9eeaf9;
-        --pill-cancel:#ececec; --pill-cancel-b:#d9d9d9;}
-  *{box-sizing:border-box}
-  body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--jm-bg);color:#1f2937}
-  header{background:var(--jm-dark);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
-  .brand{display:flex;gap:10px;align-items:center}
-  .brand img{width:28px;height:28px;border-radius:6px;object-fit:cover}
-  .brand h1{font-size:16px;margin:0}
-  .sub{opacity:.75;font-size:12px;margin-top:2px}
-  .btn{cursor:pointer;padding:8px 10px;border-radius:8px;border:1px solid var(--jm-border);background:#fff}
+  :root{--jm-primary:#08A045;--jm-border:#E7EAEE;}
+  body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+  header{background:#0E141B;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+  .brand{display:flex;gap:8px;align-items:center}
+  .brand img{width:28px;height:28px;border-radius:6px}
+  .btn{cursor:pointer;padding:6px 10px;border-radius:8px;border:1px solid var(--jm-border);background:#fff}
   .btn.primary{background:var(--jm-primary);color:#fff;border-color:transparent}
-  .btn[disabled]{opacity:.6;cursor:not-allowed}
-  main{max-width:1100px;margin:24px auto;padding:0 16px}
+  main{max-width:1000px;margin:24px auto;padding:0 16px}
   .card{background:#fff;border:1px solid var(--jm-border);border-radius:12px;padding:16px;margin-bottom:16px}
-  label{display:block;font-size:12px;color:#374151;margin-bottom:6px}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .row>*{flex:1 1 220px}
   input,select,textarea{width:100%;padding:9px;border:1px solid #d8dbe0;border-radius:10px;font:inherit}
-  textarea{min-height:90px}
-  .row{display:flex;gap:12px;flex-wrap:wrap}
-  .row>*{flex:1 1 240px}
   table{width:100%;border-collapse:collapse}
-  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
-  .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;border:1px solid transparent}
-  .Pending{background:var(--pill-pending);border-color:var(--pill-pending-b)}
-  .Approved{background:var(--pill-approved);border-color:var(--pill-approved-b)}
-  .Declined{background:var(--pill-declined);border-color:var(--pill-declined-b)}
-  .Paid{background:var(--pill-paid);border-color:var(--pill-paid-b)}
-  .Cancelled{background:var(--pill-cancel);border-color:var(--pill-cancel-b)}
-  a.switch{color:var(--jm-primary);text-decoration:none}
-  .foot-note{font-size:12px;color:#6b7280}
-  .hidden{display:none}
-
-  /* one-line compact filters with horizontal scroll if needed */
-  .filters{display:flex; align-items:center; gap:8px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px}
-  .filters select{min-width:140px; height:34px}
-  .filters input[type="date"]{width:130px; height:34px}
-  .filters input[type="search"]{width:200px; height:34px}
-  .filters .btn{height:34px; padding:0 10px}
-
-  #mine-table td:nth-child(4){ max-width:460px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+  .pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px}
+  .Pending{background:#fff3cd;border:1px solid #ffe69c}
+  .Approved{background:#d1e7dd;border:1px solid #a3cfbb}
+  .Declined{background:#f8d7da;border:1px solid #f1aeb5}
+  .Paid{background:#cff4fc;border:1px solid #9eeaf9}
+  .filters{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto}
+  .filters select,.filters input{height:32px}
 </style>
 </head>
 <body>
 <header>
-  <div class="brand">
-    <img src="logo.png" alt="JM">
-    <div>
-      <h1>JulineMart • Staff</h1>
-      <div class="sub">Petty Cash & Reimbursements</div>
-    </div>
-  </div>
+  <div class="brand"><img src="logo.png"><b>JulineMart • Staff</b></div>
   <div>
     <span id="whoami"></span>
-    <button id="btn-signout" class="btn hidden" type="button">Sign out</button>
+    <button id="btn-signout" class="btn hidden">Sign out</button>
   </div>
 </header>
 
 <main>
-  <!-- LOGIN / REGISTER -->
-  <div class="card" id="signin-card">
+  <!-- Sign in -->
+  <section id="signin-card" class="card">
     <h3>Staff Access</h3>
     <div class="row">
-      <div><label>Name</label><input type="text" id="full_name" placeholder="Your name (display)" autocomplete="name"></div>
-      <div><label>Email</label><input type="email" id="email" placeholder="you@julinemart.com" autocomplete="username"></div>
-      <div><label>Password</label><input type="password" id="password" placeholder="Enter password" autocomplete="current-password"></div>
+      <div><label>Email</label><input id="email" type="email"></div>
+      <div><label>Password</label><input id="password" type="password"></div>
     </div>
-    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-      <button id="btn-login" class="btn primary" type="button">Log in</button>
-      <button id="btn-register" class="btn" type="button">Register</button>
+    <div class="row" style="margin-top:8px">
+      <button id="btn-login" class="btn primary">Log in</button>
+      <button id="btn-register" class="btn">Register</button>
+      <a href="admin.html" class="btn">Go to Admin</a>
     </div>
-    <p id="signin-msg" class="foot-note"></p>
-    <p class="foot-note">Admin? <a class="switch" href="admin.html">Go to Admin</a></p>
-  </div>
-
-  <!-- NEW REQUEST -->
-  <section class="card hidden" id="page-new">
-    <h3>New Request</h3>
-    <div class="row">
-      <div>
-        <label>Type</label>
-        <select id="kind">
-          <option value="petty_cash">Petty Cash (advance)</option>
-          <option value="reimbursement">Reimbursement (pay me back)</option>
-        </select>
-      </div>
-      <div><label>Amount</label><input type="number" step="0.01" id="amount" placeholder="0.00"></div>
-      <div><label>Currency</label>
-        <select id="currency"><option>GBP</option><option>NGN</option><option>USD</option><option>EUR</option></select>
-      </div>
-      <div><label>Needed by (optional)</label><input type="date" id="needed_by"></div>
-    </div>
-    <label>Description / Purpose</label>
-    <textarea id="description" placeholder="What is this for?"></textarea>
-
-    <!-- multiple receipts -->
-    <label>Receipts / Supporting docs (PNG/JPG/PDF — you can select multiple)</label>
-    <input type="file" id="receipts" accept=".png,.jpg,.jpeg,.pdf" multiple>
-
-    <div style="margin-top:10px"><button id="submit-request" class="btn primary" type="button">Submit</button></div>
-    <p id="new-msg" class="foot-note"></p>
+    <p id="signin-msg" style="color:#c00"></p>
   </section>
 
-  <!-- MY REQUESTS -->
-  <section class="card hidden" id="page-mine">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-      <h3 style="margin:0">My Requests</h3>
-      <div class="filters">
-        <select id="f-status">
-          <option value="">Status: All</option>
-          <option>Pending</option><option>Approved</option><option>Declined</option><option>Paid</option><option>Cancelled</option>
-        </select>
-        <input id="f-from" type="date" aria-label="From date">
-        <input id="f-to" type="date" aria-label="To date">
-        <input id="f-q" type="search" placeholder="Search description…">
-        <button id="btn-apply" class="btn" type="button">Apply</button>
-        <button id="btn-clear" class="btn" type="button">Clear</button>
-        <button id="btn-refresh" class="btn" type="button">Refresh</button>
-      </div>
+  <!-- New request -->
+  <section id="page-new" class="card hidden">
+    <h3>New Request</h3>
+    <div class="row">
+      <div><label>Type</label><select id="kind"><option value="petty_cash">Petty Cash (advance)</option><option value="reimbursement">Reimbursement</option></select></div>
+      <div><label>Amount</label><input id="amount" type="number" min="0" step="0.01"></div>
+      <div><label>Currency</label><select id="currency"><option>GBP</option><option>NGN</option><option>USD</option></select></div>
+      <div><label>Needed by (optional)</label><input id="needed" type="date"></div>
+    </div>
+    <div><label>Description / Purpose</label><textarea id="description"></textarea></div>
+    <div><label>Receipts</label><input id="receipts" type="file" multiple accept=".png,.jpg,.jpeg,.pdf"></div>
+    <button id="btn-submit" class="btn primary" style="margin-top:10px">Submit</button>
+  </section>
+
+  <!-- My requests -->
+  <section id="page-mine" class="card hidden">
+    <h3>My Requests</h3>
+    <div class="filters" style="margin-bottom:10px">
+      <select id="f-status"><option value="">Status: All</option><option>Pending</option><option>Approved</option><option>Declined</option><option>Paid</option></select>
+      <input id="f-from" type="date"><input id="f-to" type="date">
+      <input id="f-desc" type="search" placeholder="Search description">
+      <button id="btn-apply" class="btn">Apply</button><button id="btn-clear" class="btn">Clear</button>
     </div>
     <table id="mine-table">
       <thead><tr><th>Date</th><th>Status</th><th>Amount</th><th>Comment</th></tr></thead>
@@ -137,200 +86,77 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
-const sb = supabase.createClient(
-  "https://hmguraxzebhspednbbav.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o"
+const sb=supabase.createClient(
+ "https://hmguraxzebhspednbbav.supabase.co",
+ "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o"
 );
+const el=id=>document.getElementById(id);
+const UI={signin:el('signin-card'),msg:el('signin-msg'),who:el('whoami'),btnOut:el('btn-signout'),
+          new:el('page-new'),mine:el('page-mine'),tbody:document.querySelector('#mine-table tbody')};
+let user=null;
 
-const el = id => document.getElementById(id);
-const signinCard = el('signin-card'), pageNew = el('page-new'), pageMine = el('page-mine');
-const whoami = el('whoami'), btnSignout = el('btn-signout');
+function pill(s){return `<span class="pill ${s}">${s}</span>`;}
+function fmt(a,c){return `${c} ${Number(a).toFixed(2)}`;}
 
-let currentUser = null;
-let INITIALIZED = false;
-let LOAD_SEQ = 0;
-
-function hide(x){ x.classList.add('hidden'); }
-function show(x){ x.classList.remove('hidden'); }
-
-btnSignout.onclick = async ()=>{ await sb.auth.signOut(); location.reload(); };
-
-function setBusy(button, txt){ if(!button) return; button.dataset.prev = button.textContent; button.textContent = txt; button.disabled = true; }
-function clearBusy(button){ if(!button) return; button.disabled = false; button.textContent = button.dataset.prev || button.textContent; }
-
-/* INIT */
-async function init(){
-  const { data:{ session } } = await sb.auth.getSession();
-  currentUser = session?.user ?? null;
-
-  if(currentUser){
-    // show friendly name if available
-    const name = await getDisplayName(currentUser.id, currentUser.email);
-    whoami.textContent = name;
-    show(btnSignout);
-    hide(signinCard);
-    show(pageNew);
-    show(pageMine);
-    loadMine();
-    enableRealtime();
-  }else{
-    whoami.textContent = "";
-    hide(btnSignout);
-    show(signinCard);
-    hide(pageNew);
-    hide(pageMine);
-  }
-}
-function initOnce(){ if (INITIALIZED) return; INITIALIZED = true; init(); }
-sb.auth.onAuthStateChange(()=>initOnce()); initOnce();
-
-async function getDisplayName(uid, fallbackEmail){
-  const { data } = await sb.from('profiles').select('full_name,email').eq('user_id',uid).maybeSingle();
-  return (data?.full_name && data.full_name.trim()) || data?.email || fallbackEmail || (uid||'').slice(0,8);
-}
-
-/* Realtime refresh */
-let rtChannel = null;
-function enableRealtime(){
-  try{
-    if(rtChannel) sb.removeChannel(rtChannel);
-    rtChannel = sb.channel('req-status-'+currentUser.id)
-      .on('postgres_changes',{ event:'*', schema:'public', table:'requests', filter:`user_id=eq.${currentUser.id}`}, ()=> loadMine())
-      .subscribe();
-  }catch(e){ console.warn('Realtime subscribe failed', e); }
-}
-
-/* AUTH */
-el('btn-login').onclick = async (e)=>{
-  e.preventDefault();
-  const btn = e.currentTarget;
-  const email = el('email').value.trim();
-  const password = el('password').value.trim();
-  if(!email || !password){ el('signin-msg').textContent = "Enter email & password."; return; }
-  setBusy(btn, "Logging in…");
-  try{
-    const { error } = await sb.auth.signInWithPassword({ email, password });
-    if(error) throw error;
-  }catch(err){ el('signin-msg').textContent = err.message || String(err); }
-  finally{ clearBusy(btn); }
-};
-
-el('btn-register').onclick = async (e)=>{
-  e.preventDefault();
-  const btn = e.currentTarget;
-  const email = el('email').value.trim();
-  const password = el('password').value.trim();
-  const full_name = el('full_name').value.trim();
-  if(!email || !password){ el('signin-msg').textContent = "Enter email & password."; return; }
-  setBusy(btn, "Registering…");
-  try{
-    const { data, error } = await sb.auth.signUp({ email, password });
-    if(error) throw error;
-
-    // upsert profile with name/email (idempotent)
-    if (data.user) {
-      await sb.from('profiles').upsert({ user_id: data.user.id, email, full_name }, { onConflict: 'user_id' });
-    }
-
-    if(data && data.session){
-      // logged in right away
-      init();
-    }else{
-      el('signin-msg').textContent = "Registered! Please log in.";
-    }
-  }catch(err){
-    el('signin-msg').textContent = err.message || String(err);
-  }finally{ clearBusy(btn); }
-};
-
-/* Upload receipts */
-async function uploadOne(file){
-  const ext=(file.name.split('.').pop()||'bin').toLowerCase();
-  const path=`receipts/${currentUser.id}/${crypto.randomUUID()}.${ext}`;
-  const { data, error } = await sb.storage.from('receipts').upload(path, file, { upsert:false, contentType:file.type||'application/octet-stream' });
-  if(error){ console.warn('upload error', error); return null; }
-  return data.path;
-}
-
-/* Submit request */
-el('submit-request').onclick = async (e)=>{
-  e.preventDefault();
-  try{
-    if(!currentUser){ el('new-msg').textContent = "Please log in first."; return; }
-    const kind = el('kind').value;
-    const amount = parseFloat(el('amount').value || '0');
-    const currency = el('currency').value;
-    const needed_by = el('needed_by').value || null;
-    const description = el('description').value.trim();
-    if(!description || !(amount > 0)){ el('new-msg').textContent = "Fill description and amount."; return; }
-
-    const { data: req, error } = await sb.from('requests')
-      .insert({ user_id: currentUser.id, kind, amount, currency, needed_by, description })
-      .select().single();
-    if(error){ el('new-msg').textContent = error.message; return; }
-
-    for (const f of [...el('receipts').files]){
-      const p = await uploadOne(f);
-      if(p) await sb.from('request_notes').insert({ request_id: req.id, author_id: currentUser.id, note:`receipt:${p}` });
-    }
-
-    el('new-msg').textContent = "Request submitted.";
-    el('amount').value=""; el('description').value=""; el('needed_by').value=""; el('receipts').value="";
-    loadMine();
-  }catch(err){ el('new-msg').textContent = err.message || String(err); }
-};
-
-/* Helpers */
-function pill(s){ return `<span class="pill ${s}">${s}</span>`; }
-function fmt(a,c){ return `${c} ${Number(a).toFixed(2)}`; }
 async function latestAdminComment(requestId){
   const { data } = await sb.from('request_notes')
-    .select('note, created_at')
-    .eq('request_id', requestId)
-    .order('created_at', { ascending:false })
-    .limit(10);
-  const comments = (data||[]).filter(n => !n.note.startsWith('receipt:'));
-  return comments.length ? comments[0].note : '';
+    .select('note,created_at').eq('request_id',requestId)
+    .order('created_at',{ascending:false}).limit(20);
+  if(!data) return '';
+  const human = data.filter(n => n.note && !n.note.startsWith('receipt:') && !n.note.startsWith('Status ->'));
+  return human.length ? human[0].note : '';
 }
 
-/* Filters */
-el('btn-apply').onclick = ()=> loadMine(readFilters());
-el('btn-clear').onclick = ()=>{ el('f-status').value=''; el('f-from').value=''; el('f-to').value=''; el('f-q').value=''; loadMine({}); };
-el('btn-refresh').onclick = ()=> loadMine(readFilters());
-function readFilters(){ return { status:el('f-status').value||null, from:el('f-from').value||null, to:el('f-to').value||null, q:el('f-q').value.trim()||null }; }
-
-/* Load list */
 async function loadMine(filters={}){
-  const seq = ++LOAD_SEQ;
-  const tbody=document.querySelector('#mine-table tbody');
-  tbody.innerHTML='<tr><td colspan="4">Loading…</td></tr>';
-
-  let q = sb.from('requests').select('*').eq('user_id', currentUser.id).order('created_at',{ascending:false});
+  let q=sb.from('requests').select('*').eq('user_id',user.id).order('created_at',{ascending:false});
   if(filters.status) q=q.eq('status',filters.status);
   if(filters.from) q=q.gte('created_at',filters.from+'T00:00:00Z');
-  if(filters.to)   q=q.lte('created_at',filters.to+'T23:59:59Z');
-  if(filters.q)    q=q.ilike('description', `%${filters.q}%`);
-
-  const { data, error } = await q;
-  if(seq !== LOAD_SEQ) return;
-  if(error){ tbody.innerHTML = `<tr><td colspan="4">${error.message}</td></tr>`; return; }
-
-  tbody.innerHTML='';
-  for (const r of data){
+  if(filters.to) q=q.lte('created_at',filters.to+'T23:59:59Z');
+  if(filters.desc) q=q.ilike('description','%'+filters.desc+'%');
+  const { data } = await q;
+  UI.tbody.innerHTML='';
+  for(const r of data||[]){
     const comment = await latestAdminComment(r.id);
-    tbody.insertAdjacentHTML('beforeend', `
+    UI.tbody.insertAdjacentHTML('beforeend',`
       <tr>
         <td>${new Date(r.created_at).toLocaleDateString()}</td>
         <td>${pill(r.status)}</td>
         <td>${fmt(r.amount,r.currency)}</td>
-        <td>${comment || ''}</td>
-      </tr>
-    `);
+        <td>${comment||''}</td>
+      </tr>`);
   }
 }
 
-/* PWA */
-if('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js').catch(()=>{}); }
+async function init(){
+  const { data:{session} }=await sb.auth.getSession();
+  user=session?.user||null;
+  if(user){
+    UI.who.textContent=user.email; UI.btnOut.classList.remove('hidden');
+    UI.signin.classList.add('hidden'); UI.new.classList.remove('hidden'); UI.mine.classList.remove('hidden');
+    loadMine();
+  }else{
+    UI.who.textContent=''; UI.btnOut.classList.add('hidden');
+    UI.signin.classList.remove('hidden'); UI.new.classList.add('hidden'); UI.mine.classList.add('hidden');
+  }
+}
+sb.auth.onAuthStateChange(init); init();
+
+el('btn-login').onclick=async()=>{const {error}=await sb.auth.signInWithPassword({email:el('email').value.trim(),password:el('password').value.trim()}); if(error)UI.msg.textContent=error.message;};
+el('btn-register').onclick=async()=>{const {error,data}=await sb.auth.signUp({email:el('email').value.trim(),password:el('password').value.trim()}); if(error)UI.msg.textContent=error.message; if(data?.user)UI.msg.textContent="Registered, now log in."};
+el('btn-signout').onclick=()=>sb.auth.signOut().then(()=>location.reload());
+
+el('btn-submit').onclick=async()=>{
+  const kind=el('kind').value, amount=Number(el('amount').value), currency=el('currency').value, needed=el('needed').value, desc=el('description').value.trim();
+  const { data, error } = await sb.from('requests').insert({user_id:user.id,kind,amount,currency,needed_by:needed||null,description:desc,status:'Pending'}).select().single();
+  if(error) return alert(error.message);
+  const files=el('receipts').files;
+  if(files.length){ for(const f of files){const path=`${user.id}/${Date.now()}-${f.name}`;await sb.storage.from('receipts').upload(path,f);await sb.from('request_notes').insert({request_id:data.id,author_id:user.id,note:'receipt:'+path}); } }
+  el('amount').value=''; el('description').value=''; el('receipts').value='';
+  loadMine();
+};
+
+el('btn-apply').onclick=()=>loadMine({status:el('f-status').value||null,from:el('f-from').value||null,to:el('f-to').value||null,desc:el('f-desc').value.trim()||null});
+el('btn-clear').onclick=()=>{el('f-status').value='';el('f-from').value='';el('f-to').value='';el('f-desc').value='';loadMine();};
 </script>
 </body>
 </html>
