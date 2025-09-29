@@ -163,18 +163,34 @@ async function readSessionAndRender(){
 sb.auth.onAuthStateChange(readSessionAndRender); readSessionAndRender();
 
 /* Login */
-UI.form.addEventListener('submit', async (e)=>{
+const sMsg = document.getElementById('signin-msg');
+document.getElementById('staff-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  UI.msg.textContent='Logging in…';
-  try{
-    const email=$('email').value.trim(), pw=$('password').value.trim();
-    if(!email||!pw){ UI.msg.textContent='Enter email & password.'; return; }
-    const {error}=await sb.auth.signInWithPassword({email,password:pw});
-    if(error) throw error;
-    const {data:s}=await sb.auth.getSession();
-    if(!s?.session){ UI.msg.textContent='Logged in, but no session. Clear cache/service worker.'; return; }
-    UI.msg.textContent='Welcome.'; setLoggedInUI(true); await readSessionAndRender();
-  }catch(err){ console.error(err); UI.msg.textContent=(err&&err.message)||String(err); }
+  sMsg.textContent = 'Logging in…';
+  try {
+    const email = document.getElementById('email').value.trim();
+    const pw    = document.getElementById('password').value.trim();
+    if (!email || !pw) { sMsg.textContent = 'Enter email & password.'; return; }
+
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+    if (error) throw error;
+
+    // Use returned session immediately
+    if (!data?.session) {
+      const g = await sb.auth.getSession();
+      if (!g?.data?.session) {
+        sMsg.textContent = 'Logged in, but no session was created. Clear cache/service worker and retry.';
+        return;
+      }
+    }
+
+    sMsg.textContent = 'Welcome.';
+    setLoggedInUI(true);
+    await readSessionAndRender();
+  } catch (err) {
+    console.error('Staff login failed:', err);
+    sMsg.textContent = (err && err.message) || String(err);
+  }
 });
 
 /* Register */
