@@ -40,10 +40,13 @@
   a.switch{color:var(--jm-primary);text-decoration:none}
   .foot-note{font-size:12px;color:#6b7280}
   .hidden{display:none}
-  .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
-  .thumbs a{display:inline-flex;align-items:center;gap:6px;border:1px solid #e5e7eb;border-radius:8px;padding:6px 8px;text-decoration:none;color:#111}
-  .thumbs img{width:28px;height:28px;border-radius:6px;object-fit:cover}
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+  /* simple modal for full history (optional access) */
+  dialog{border:0;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.2);max-width:560px;width:90%}
+  dialog::backdrop{background:rgba(0,0,0,.35)}
+  .history-list{max-height:300px;overflow:auto;border:1px solid #eee;border-radius:8px;padding:8px}
+  .history-item{padding:6px 4px;border-bottom:1px dashed #eee}
+  .history-item:last-child{border-bottom:0}
 </style>
 </head>
 <body>
@@ -100,13 +103,12 @@
     <!-- multiple receipts -->
     <label>Receipts / Supporting docs (PNG/JPG/PDF — you can select multiple)</label>
     <input type="file" id="receipts" accept=".png,.jpg,.jpeg,.pdf" multiple>
-    <div id="receipt-preview" class="thumbs"></div>
 
     <div style="margin-top:10px"><button id="submit-request" class="btn primary" type="button">Submit</button></div>
     <p id="new-msg" class="foot-note"></p>
   </section>
 
-  <!-- MY REQUESTS (filters + list + edit/cancel) -->
+  <!-- MY REQUESTS (exact format: DATE … STATUS … AMOUNT … COMMENT) -->
   <section class="card hidden" id="page-mine">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <h3>My Requests</h3>
@@ -124,12 +126,13 @@
       </div>
     </div>
     <table id="mine-table">
-      <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Status</th><th>Receipt(s)</th><th>Actions</th></tr></thead>
+      <thead><tr><th>DATE</th><th>STATUS</th><th>AMOUNT</th><th>COMMENT</th></tr></thead>
       <tbody></tbody>
     </table>
+    <p class="foot-note" style="margin-top:10px">Tip: click a row to view full history.</p>
   </section>
 
-  <!-- Paid History -->
+  <!-- Paid History (kept as before) -->
   <section class="card hidden" id="page-paid">
     <h3>Paid History (by month)</h3>
     <div style="overflow:auto">
@@ -140,6 +143,15 @@
     </div>
   </section>
 </main>
+
+<!-- Full history modal -->
+<dialog id="dlg-history">
+  <h3>Request history</h3>
+  <div id="history-body" class="history-list"></div>
+  <div style="text-align:right;margin-top:10px">
+    <button id="btn-close" class="btn" type="button">Close</button>
+  </div>
+</dialog>
 
 <!-- Supabase UMD -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -153,19 +165,20 @@ const sb = supabase.createClient(
 const el = id => document.getElementById(id);
 const signinCard = el('signin-card'), pageNew = el('page-new'), pageMine = el('page-mine'), pagePaid = el('page-paid');
 const whoami = el('whoami'), btnSignout = el('btn-signout');
-let currentUser = null;
+const dlg = el('dlg-history'), histBody = el('history-body'), btnClose = el('btn-close');
 
-/* guards */
+let currentUser = null;
 let INITIALIZED = false;
 let LOAD_SEQ = 0;
 
 function show(section){ [signinCard,pageNew,pageMine,pagePaid].forEach(s=>s.classList.add('hidden')); section.classList.remove('hidden'); }
 btnSignout.onclick = async ()=>{ await sb.auth.signOut(); location.reload(); };
+btnClose.onclick = ()=> dlg.close();
 
 function setBusy(button, txt){ if(!button) return; button.dataset.prev = button.textContent; button.textContent = txt; button.disabled = true; }
 function clearBusy(button){ if(!button) return; button.disabled = false; button.textContent = button.dataset.prev || button.textContent; }
 
-/* ====== INIT + Realtime live notifications ====== */
+/* ====== INIT + Realtime ====== */
 async function init(){
   const { data:{ session } } = await sb.auth.getSession();
   currentUser = session?.user ?? null;
@@ -177,10 +190,6 @@ async function init(){
     loadMine();
     loadPaidHistory();
     enableRealtime();
-    // Ask for notification permission (only once per session)
-    if (Notification && Notification.permission === 'default') {
-      try { await Notification.requestPermission(); } catch {}
-    }
   }else{
     whoami.textContent = "";
     btnSignout.classList.add('hidden');
@@ -188,41 +197,20 @@ async function init(){
   }
 }
 function initOnce(){ if (INITIALIZED) return; INITIALIZED = true; init(); }
-sb.auth.onAuthStateChange(()=>initOnce());
-initOnce();
+sb.auth.onAuthStateChange(()=>initOnce()); initOnce();
 
-/* Realtime notifications: alert status changes for THIS user's requests */
 let rtChannel = null;
 function enableRealtime(){
   try{
     if(rtChannel) sb.removeChannel(rtChannel);
     rtChannel = sb.channel('req-status-'+currentUser.id)
-      .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'requests', filter: `user_id=eq.${currentUser.id}` },
-          payload => {
-            if(payload.eventType === 'UPDATE'){
-              const newStatus = payload.new.status;
-              notify(`Request ${payload.new.id} is now ${newStatus}`);
-              loadMine(); loadPaidHistory();
-            }
-            if(payload.eventType === 'INSERT'){
-              notify(`New request submitted.`);
-              loadMine();
-            }
-          })
-      .subscribe();
+      .on('postgres_changes',{ event:'*', schema:'public', table:'requests', filter:`user_id=eq.${currentUser.id}`}, payload=>{
+        loadMine(); loadPaidHistory();
+      }).subscribe();
   }catch(e){ console.warn('Realtime subscribe failed', e); }
 }
-function notify(message){
-  try{
-    if(!('Notification' in window)) return;
-    if(Notification.permission === 'granted'){
-      new Notification('JulineMart', { body: message, icon: 'logo.png' });
-    }
-  }catch{}
-}
 
-/* ====== AUTH HANDLERS ====== */
+/* ====== AUTH ====== */
 el('btn-login').onclick = async (e)=>{
   e.preventDefault();
   const btn = e.currentTarget;
@@ -254,18 +242,7 @@ el('btn-register').onclick = async (e)=>{
   finally{ clearBusy(btn); }
 };
 
-/* ====== RECEIPTS PREVIEW & UPLOAD (multiple) ====== */
-const fileIcon = type => type.includes('pdf') ? '📄' : '';
-el('receipts').addEventListener('change', () => {
-  const box = el('receipt-preview'); box.innerHTML = '';
-  [...el('receipts').files].forEach(f=>{
-    const item = document.createElement('a'); item.href='#';
-    if(f.type.startsWith('image/')){ const img = document.createElement('img'); img.src = URL.createObjectURL(f); item.appendChild(img); item.append(' '+f.name); }
-    else { item.textContent = `${fileIcon(f.type)} ${f.name}`; }
-    box.appendChild(item);
-  });
-});
-
+/* ====== Upload many receipts ====== */
 async function uploadOne(file){
   const ext=(file.name.split('.').pop()||'bin').toLowerCase();
   const path=`receipts/${currentUser.id}/${crypto.randomUUID()}.${ext}`;
@@ -274,7 +251,7 @@ async function uploadOne(file){
   return data.path;
 }
 
-/* ====== SUBMIT NEW REQUEST ====== */
+/* ====== Submit new request ====== */
 el('submit-request').onclick = async (e)=>{
   e.preventDefault();
   try{
@@ -286,13 +263,11 @@ el('submit-request').onclick = async (e)=>{
     const description = el('description').value.trim();
     if(!description || !(amount > 0)){ el('new-msg').textContent = "Fill description and amount."; return; }
 
-    // Insert request
     const { data: req, error } = await sb.from('requests')
       .insert({ user_id: currentUser.id, kind, amount, currency, needed_by, description })
       .select().single();
     if(error){ el('new-msg').textContent = error.message; return; }
 
-    // Upload all receipts -> save as request_notes (receipt:<path>)
     const files = [...el('receipts').files];
     for (const f of files){
       const p = await uploadOne(f);
@@ -300,25 +275,47 @@ el('submit-request').onclick = async (e)=>{
     }
 
     el('new-msg').textContent = "Request submitted.";
-    el('amount').value=""; el('description').value=""; el('needed_by').value=""; el('receipts').value=""; el('receipt-preview').innerHTML='';
+    el('amount').value=""; el('description').value=""; el('needed_by').value=""; el('receipts').value="";
     loadMine(); loadPaidHistory();
   }catch(err){ el('new-msg').textContent = err.message || String(err); }
 };
 
-/* ====== LIST + FILTERS + EDIT/CANCEL ====== */
+/* ====== Helpers for list ====== */
 function pill(s){ return `<span class="pill ${s}">${s}</span>`; }
 function fmt(a,c){ return `${c} ${Number(a).toFixed(2)}`; }
-async function signedUrl(path){ if(!path) return ''; const { data, error } = await sb.storage.from('receipts').createSignedUrl(path,600); return error?'':data.signedUrl; }
 
+async function latestComment(requestId){
+  // latest non-receipt note, most recent first
+  const { data, error } = await sb.from('request_notes')
+    .select('note, created_at, author_id')
+    .eq('request_id', requestId)
+    .order('created_at', { ascending:false })
+    .limit(10);
+  if(error || !data || !data.length) return 'Awaiting review';
+  const candidates = data.filter(n => !n.note.startsWith('receipt:'));
+  if(!candidates.length) return 'Awaiting review';
+  return candidates[0].note;
+}
+
+async function fullHistory(requestId){
+  const { data, error } = await sb.from('request_notes')
+    .select('note, created_at, author_id')
+    .eq('request_id', requestId)
+    .order('created_at', { ascending:true });
+  return error ? [] : data;
+}
+
+/* ====== Filters ====== */
 el('btn-apply').onclick = ()=> loadMine(readFilters());
 el('btn-clear').onclick = ()=>{ el('f-status').value=''; el('f-from').value=''; el('f-to').value=''; el('f-q').value=''; loadMine({}); };
 el('btn-refresh').onclick = ()=> loadMine(readFilters());
 function readFilters(){ return { status:el('f-status').value||null, from:el('f-from').value||null, to:el('f-to').value||null, q:el('f-q').value.trim()||null }; }
 
+/* ====== Load list (DATE … STATUS … AMOUNT … COMMENT) ====== */
 async function loadMine(filters={}){
   const seq = ++LOAD_SEQ;
   const tbody=document.querySelector('#mine-table tbody');
-  tbody.innerHTML='<tr><td colspan="6">Loading…</td></tr>';
+  tbody.innerHTML='<tr><td colspan="4">Loading…</td></tr>';
 
   let q = sb.from('requests').select('*').eq('user_id', currentUser.id).order('created_at',{ascending:false});
   if(filters.status) q=q.eq('status',filters.status);
@@ -327,85 +324,42 @@ async function loadMine(filters={}){
   if(filters.q)    q=q.ilike('description', `%${filters.q}%`);
 
   const { data, error } = await q;
-  if(seq !== LOAD_SEQ) return; // stale
-  if(error){ tbody.innerHTML = `<tr><td colspan="6">${error.message}</td></tr>`; return; }
+  if(seq !== LOAD_SEQ) return;
+  if(error){ tbody.innerHTML = `<tr><td colspan="4">${error.message}</td></tr>`; return; }
 
   tbody.innerHTML='';
   for (const r of data){
-    // receipts for this request
-    const { data: notes } = await sb.from('request_notes').select('*').eq('request_id', r.id);
-    const recs = (notes||[]).filter(n=>n.note.startsWith('receipt:'));
-    let links='';
-    for (const rec of recs){
-      const url = await signedUrl(rec.note.replace('receipt:',''));
-      if(url){
-        const isPdf = url.toLowerCase().includes('.pdf');
-        links += `<a href="${url}" target="_blank" rel="noopener">${isPdf?'📄':'🖼️'} receipt</a> `;
-      }
-    }
-
-    // actions for Pending
-    let actions = '';
-    if(r.status === 'Pending'){
-      actions = `
-        <button class="btn" data-edit="${r.id}">Edit</button>
-        <button class="btn" data-cancel="${r.id}">Cancel</button>
-      `;
-    }
-
-    tbody.insertAdjacentHTML('beforeend', `
-      <tr>
+    const comment = await latestComment(r.id);
+    const rowHtml = `
+      <tr data-id="${r.id}" style="cursor:pointer">
         <td>${new Date(r.created_at).toLocaleDateString()}</td>
-        <td>${r.kind.replace('_',' ')}</td>
-        <td>${fmt(r.amount,r.currency)}</td>
         <td>${pill(r.status)}</td>
-        <td>${links || '—'}</td>
-        <td>${actions}</td>
+        <td>${fmt(r.amount,r.currency)}</td>
+        <td>${comment}</td>
       </tr>
-    `);
+    `;
+    tbody.insertAdjacentHTML('beforeend', rowHtml);
   }
 
-  // wire actions
-  document.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => editRequest(b.dataset.edit));
-  document.querySelectorAll('[data-cancel]').forEach(b => b.onclick = () => cancelRequest(b.dataset.cancel));
+  // click row -> open full history
+  tbody.querySelectorAll('tr[data-id]').forEach(tr=>{
+    tr.onclick = async ()=>{
+      const rid = tr.getAttribute('data-id');
+      const notes = await fullHistory(rid);
+      histBody.innerHTML = notes.length ? '' : '<div class="history-item">No history yet.</div>';
+      notes.forEach(n=>{
+        const d = new Date(n.created_at).toLocaleString();
+        histBody.insertAdjacentHTML('beforeend', `<div class="history-item"><b>${d}</b> — ${n.note}</div>`);
+      });
+      dlg.showModal();
+    };
+  });
+
+  // show Paid history card too
+  pagePaid.classList.remove('hidden');
 }
 
-async function editRequest(id){
-  // simple prompts (keep UI minimal)
-  const amount = prompt('New amount (leave blank to keep)', '');
-  const description = prompt('New description (leave blank to keep)', '');
-  const needed_by = prompt('New needed-by date (YYYY-MM-DD) (blank to keep)', '');
-
-  const patch = {};
-  if(amount && !isNaN(parseFloat(amount))) patch.amount = parseFloat(amount);
-  if(description && description.trim()) patch.description = description.trim();
-  if(needed_by && /^\d{4}-\d{2}-\d{2}$/.test(needed_by)) patch.needed_by = needed_by;
-
-  if(Object.keys(patch).length === 0) return;
-
-  const { error } = await sb.from('requests')
-    .update(patch)
-    .eq('id', id)
-    .eq('user_id', currentUser.id)
-    .eq('status', 'Pending');   // only pending can be edited
-  if(error){ alert(error.message); return; }
-  await sb.from('request_notes').insert({ request_id:id, author_id: currentUser.id, note:'Edited by staff' });
-  loadMine(readFilters());
-}
-
-async function cancelRequest(id){
-  if(!confirm('Cancel this request? This cannot be undone.')) return;
-  const { error } = await sb.from('requests')
-    .update({ status:'Cancelled' })
-    .eq('id', id)
-    .eq('user_id', currentUser.id)
-    .eq('status', 'Pending');
-  if(error){ alert(error.message); return; }
-  await sb.from('request_notes').insert({ request_id:id, author_id: currentUser.id, note:'Cancelled by staff' });
-  loadMine(readFilters());
-}
-
-/* ====== PAID HISTORY (sum by month for this user) ====== */
+/* ====== Paid History (monthly) ====== */
 async function loadPaidHistory(){
   const tbody = document.querySelector('#paid-table tbody');
   tbody.innerHTML = '<tr><td colspan="2">Loading…</td></tr>';
@@ -417,7 +371,6 @@ async function loadPaidHistory(){
     .order('created_at',{ascending:false});
   if(error){ tbody.innerHTML = `<tr><td colspan="2">${error.message}</td></tr>`; return; }
 
-  // group by YYYY-MM
   const groups = {};
   for(const r of data){
     const d = new Date(r.created_at);
@@ -429,12 +382,9 @@ async function loadPaidHistory(){
   for(const [ym, total] of rows){
     tbody.insertAdjacentHTML('beforeend', `<tr><td>${ym}</td><td>GBP ${total.toFixed(2)}</td></tr>`);
   }
-
-  // show card when logged in
-  pagePaid.classList.remove('hidden');
 }
 
-/* ====== PWA service worker (installable) ====== */
+/* PWA */
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('service-worker.js').catch(()=>{});
 }
