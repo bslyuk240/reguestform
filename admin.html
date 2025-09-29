@@ -8,7 +8,7 @@
 <style>
   :root{--jm-primary:#08A045;--jm-dark:#0E141B;--jm-bg:#F6F8FA;--jm-border:#E7EAEE;}
   *{box-sizing:border-box}
-  body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--jm-bg);color:#1f2937}
+  body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#fff;color:#111}
   header{background:#0E141B;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
   .brand{display:flex;gap:10px;align-items:center}
   .brand img{width:28px;height:28px;border-radius:6px;object-fit:cover}
@@ -18,8 +18,8 @@
   .btn[disabled]{opacity:.6;cursor:not-allowed}
   main{max-width:1100px;margin:24px auto;padding:0 16px}
   .card{background:#fff;border:1px solid var(--jm-border);border-radius:12px;padding:16px;margin-bottom:16px}
-  .row{display:flex;gap:12px;flex-wrap:wrap}
-  .row>*{flex:1 1 240px}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .row>*{flex:1 1 220px}
   input,select{width:100%;padding:10px;border:1px solid #d8dbe0;border-radius:10px;font:inherit}
   table{width:100%;border-collapse:collapse} th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
   .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px}
@@ -29,7 +29,6 @@
   .Paid{background:#cff4fc;border:1px solid #9eeaf9}
   .hidden{display:none}
   .foot{font-size:12px;color:#6b7280}
-  .big{font-size:28px;font-weight:700}
 </style>
 </head>
 <body>
@@ -62,27 +61,19 @@
     <p id="auth-msg" class="foot"></p>
   </section>
 
-  <!-- Not admin -->
-  <section id="no-admin" class="card hidden">
-    <h3>Access denied</h3>
-    <p>Your account is <b>not an admin</b>. Ask the owner to promote your role in <code>profiles</code>.</p>
-    <p><a class="btn" href="staff.html" style="text-decoration:none">Go to Staff</a></p>
-  </section>
-
-  <!-- Stats: Total Paid (with date filters) -->
+  <!-- Stats: Total Paid -->
   <section id="stats" class="card hidden">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+    <div class="row" style="align-items:center">
       <div>
-        <h3>Total Paid (any period)</h3>
-        <div class="foot">Choose dates or leave empty for all-time.</div>
-        <div class="row" style="margin-top:8px;max-width:520px">
+        <h3>Total Paid (choose dates or leave empty for all-time)</h3>
+        <div class="row">
           <div><input type="date" id="s-from"></div>
           <div><input type="date" id="s-to"></div>
-          <div><button id="btn-calc" class="btn" type="button">Calculate</button></div>
-          <div><button id="btn-all" class="btn" type="button">All-time</button></div>
+          <div style="flex:0 0 auto"><button id="btn-calc" class="btn" type="button">Calculate</button></div>
+          <div style="flex:0 0 auto"><button id="btn-all" class="btn" type="button">All-time</button></div>
         </div>
       </div>
-      <div id="paid-total" class="big">GBP 0.00</div>
+      <div id="paid-total" style="font-size:28px;font-weight:700">GBP 0.00</div>
     </div>
   </section>
 
@@ -96,8 +87,8 @@
           <div><select id="f-kind"><option value="">Type: All</option><option value="petty_cash">Petty Cash</option><option value="reimbursement">Reimbursement</option></select></div>
           <div><input id="f-from" type="date"></div>
           <div><input id="f-to" type="date"></div>
-          <div><button id="btn-filter" class="btn" type="button">Apply</button></div>
-          <div><button id="btn-clear" class="btn" type="button">Clear</button></div>
+          <div style="flex:0 0 auto"><button id="btn-filter" class="btn" type="button">Apply</button></div>
+          <div style="flex:0 0 auto"><button id="btn-clear" class="btn" type="button">Clear</button></div>
         </div>
       </div>
       <div><button id="btn-export" class="btn primary" type="button">Export CSV</button></div>
@@ -105,7 +96,7 @@
 
     <div class="card">
       <table id="admin-table">
-        <thead><tr><th>Date</th><th>Staff</th><th>Type</th><th>Amount</th><th>Status</th><th>Actions</th><th>Receipt</th></tr></thead>
+        <thead><tr><th>Date</th><th>Staff</th><th>Type</th><th>Amount</th><th>Status</th><th>Action</th><th>Receipt</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -121,13 +112,13 @@ const sb = supabase.createClient(
 
 const el=id=>document.getElementById(id);
 const S={who:el('whoami'),btnOut:el('btn-signout'),auth:el('auth'),authMsg:el('auth-msg'),
-         loginBtn:el('btn-login'),noAdmin:el('no-admin'),admin:el('admin'),stats:el('stats'),
+         loginBtn:el('btn-login'),noAdmin:null,admin:el('admin'),stats:el('stats'),
          tbody:document.querySelector('#admin-table tbody'), paidTotal:el('paid-total'),
          sFrom:el('s-from'), sTo:el('s-to'), btnCalc:el('btn-calc'), btnAll:el('btn-all')};
 
 let user=null, LOAD_SEQ=0, INITIALIZED=false;
 
-function show(sec){[S.auth,S.noAdmin,S.admin,S.stats].forEach(x=>x.classList.add('hidden'));sec.classList.remove('hidden');}
+function show(sec){[S.auth,S.admin,S.stats].forEach(x=>x.classList.add('hidden'));sec.classList.remove('hidden');}
 function setBusy(b,t){if(!b)return;b.dataset.prev=b.textContent;b.textContent=t;b.disabled=true;}
 function clearBusy(b){if(!b)return;b.textContent=b.dataset.prev||b.textContent;b.disabled=false;}
 
@@ -137,13 +128,13 @@ async function init(){
   if(!user){S.who.textContent='';S.btnOut.classList.add('hidden');show(S.auth);return;}
   S.who.textContent=user.email;S.btnOut.classList.remove('hidden');
   const prof=await sb.from('profiles').select('role').eq('user_id',user.id).maybeSingle();
-  if((prof.data?.role||'staff')!=='admin'){show(S.noAdmin);return;}
+  if((prof.data?.role||'staff')!=='admin'){show(S.auth);S.authMsg.textContent='Access denied (not admin).';return;}
   S.stats.classList.remove('hidden'); show(S.admin);
-  loadAdmin(); calcPaid(); // initial
+  load(); calcPaid();
 }
-function initOnce(){if(INITIALIZED)return;INITIALIZED=true;init();}
+function initOnce(){if(INITIALIZED) return; INITIALIZED=true; init();}
 sb.auth.onAuthStateChange(()=>initOnce()); initOnce();
-S.btnOut.onclick=async()=>{await sb.auth.signOut();location.href='staff.html';};
+S.btnOut.onclick=async()=>{await sb.auth.signOut(); location.href='staff.html';};
 S.loginBtn.onclick=async(e)=>{e.preventDefault();const email=el('email').value.trim(),pw=el('password').value.trim();
  if(!email||!pw){S.authMsg.textContent='Enter email & password.';return;}
  setBusy(S.loginBtn,'Logging in…');try{const {error}=await sb.auth.signInWithPassword({email,password:pw});
@@ -159,7 +150,7 @@ async function fetchRequests(filters={}){let q=sb.from('requests').select('*, pr
  const {data,error}=await q;if(error)throw error;return data;}
 
 let LOAD_GUARD=0;
-async function loadAdmin(filters={}) {
+async function load(filters={}) {
   const seq=++LOAD_GUARD; S.tbody.innerHTML='<tr><td colspan="7">Loading…</td></tr>';
   try{
     const data=await fetchRequests(filters);
@@ -170,6 +161,8 @@ async function loadAdmin(filters={}) {
       const {data:notes}=await sb.from('request_notes').select('*').eq('request_id',r.id);
       const rec=(notes||[]).find(n=>n.note.startsWith('receipt:'));
       let link=''; if(rec){const url=await signedUrl(rec.note.replace('receipt:','')); if(url) link=`<a href="${url}" target="_blank" rel="noopener">View</a>`;}
+      const selId=`sel-${r.id}`, cId=`com-${r.id}`, btnId=`btn-${r.id}`;
+      const options=['Pending','Approved','Declined','Paid'].map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('');
       S.tbody.insertAdjacentHTML('beforeend',
         `<tr>
           <td>${new Date(r.created_at).toLocaleDateString()}</td>
@@ -178,34 +171,37 @@ async function loadAdmin(filters={}) {
           <td>${fmt(r.amount,r.currency)}</td>
           <td>${pill(r.status)}</td>
           <td>
-            <button class="btn" data-act="approve" data-id="${r.id}">Approve</button>
-            <button class="btn" data-act="decline" data-id="${r.id}">Decline</button>
-            <button class="btn" data-act="pay" data-id="${r.id}">Mark Paid</button>
+            <div class="row" style="gap:6px;align-items:center">
+              <div style="flex:1 1 120px"><select id="${selId}">${options}</select></div>
+              <div style="flex:2 1 260px"><input id="${cId}" placeholder="Comment to staff (reason / note)"></div>
+              <div style="flex:0 0 auto"><button id="${btnId}" class="btn">Update</button></div>
+            </div>
           </td>
           <td>${link}</td>
         </tr>`);
+      document.getElementById(btnId).onclick = ()=> updateStatus(r.id, document.getElementById(selId).value, document.getElementById(cId).value.trim());
     }
-    document.querySelectorAll('[data-act]').forEach(b=>b.onclick=onAction);
   }catch(err){if(seq!==LOAD_GUARD) return; S.tbody.innerHTML=`<tr><td colspan="7">${err.message}</td></tr>`;}
 }
 
-async function onAction(e){
-  const id=e.target.dataset.id,act=e.target.dataset.act;
+async function updateStatus(id, next, comment){
   try{
-    if(act==='approve'||act==='decline'){
-      const status=act==='approve'?'Approved':'Declined';
-      await sb.from('requests').update({status}).eq('id',id);
-      await sb.from('request_notes').insert({request_id:id,author_id:user.id,note:`Status -> ${status}`});
-    }else if(act==='pay'){
-      const method=prompt('Payment method (e.g., Transfer, Cash, PayPal):','Transfer'); if(method===null)return;
-      const reference=prompt('Reference / Transaction ID:','');
-      await sb.from('payouts').insert({request_id:id,paid_by:user.id,method,reference});
-      await sb.from('requests').update({status:'Paid'}).eq('id',id);
-      await sb.from('request_notes').insert({request_id:id,author_id:user.id,note:`Status -> Paid (${method} ${reference||''})`});
+    if(next==='Paid'){
+      const method = prompt('Payment method (e.g., Transfer, Cash, PayPal):','Transfer'); if(method===null) return;
+      const reference = prompt('Reference / Transaction ID:','');
+      await sb.from('payouts').insert({ request_id:id, paid_by:user.id, method, reference });
     }
-    loadAdmin(readFilters());
-    calcPaid(); // refresh stats if something became Paid
-  }catch(err){alert(err.message||String(err));}
+    await sb.from('requests').update({ status: next }).eq('id', id);
+
+    // Save admin comment (if provided)
+    if(comment){
+      await sb.from('request_notes').insert({ request_id:id, author_id:user.id, note: comment });
+    }
+    // Also save a standard status marker so we always have it in history
+    await sb.from('request_notes').insert({ request_id:id, author_id:user.id, note:`Status -> ${next}` });
+
+    load(readFilters()); calcPaid();
+  }catch(err){ alert(err.message||String(err)); }
 }
 
 function readFilters(){ return {
@@ -214,31 +210,31 @@ function readFilters(){ return {
   from:   el('f-from').value   || null,
   to:     el('f-to').value     || null
 };}
-el('btn-filter').onclick=()=> loadAdmin(readFilters());
-el('btn-clear').onclick=()=>{el('f-status').value='';el('f-kind').value='';el('f-from').value='';el('f-to').value='';loadAdmin({});};
+el('btn-filter').onclick=()=> load(readFilters());
+el('btn-clear').onclick=()=>{ el('f-status').value=''; el('f-kind').value=''; el('f-from').value=''; el('f-to').value=''; load({}); };
 
 /* Export CSV */
 el('btn-export').onclick=async()=>{const {data,error}=await sb.from('requests').select('*').order('created_at',{ascending:false});
  if(error){alert(error.message);return;}const rows=[['created_at','user_id','kind','amount','currency','needed_by','status','updated_at','id']];
  data.forEach(r=>rows.push([r.created_at,r.user_id,r.kind,r.amount,r.currency,r.needed_by||'',r.status,r.updated_at,r.id]));
  const csv=rows.map(r=>r.map(x=>`"${String(x).replaceAll('"','""')}"`).join(',')).join('\n');
- const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='julinemart_requests.csv'; a.click(); URL.revokeObjectURL(url);};
+ const blob=new Blob([csv],{type:'text/csv'});const url=URL.createObjectURL(blob);const a=document.createElement('a');
+ a.href=url;a.download='julinemart_requests.csv';a.click();URL.revokeObjectURL(url);};
 
-/* ====== STATS: Total Paid (single sum, by date range) ====== */
+/* Stats: Total Paid */
 async function calcPaid(){
-  const from=S.sFrom.value? S.sFrom.value+'T00:00:00Z' : null;
-  const to=S.sTo.value? S.sTo.value+'T23:59:59Z' : null;
-
+  const from=el('s-from').value? el('s-from').value+'T00:00:00Z' : null;
+  const to=el('s-to').value? el('s-to').value+'T23:59:59Z' : null;
   let q=sb.from('requests').select('amount').eq('status','Paid');
-  if(from) q=q.gte('created_at', from);
-  if(to) q=q.lte('created_at', to);
+  if(from) q=q.gte('created_at',from);
+  if(to) q=q.lte('created_at',to);
   const {data,error}=await q;
   if(error){ S.paidTotal.textContent='Error'; return; }
   const sum=(data||[]).reduce((acc,r)=> acc + Number(r.amount||0), 0);
   S.paidTotal.textContent = `GBP ${sum.toFixed(2)}`;
 }
-S.btnCalc.onclick=()=> calcPaid();
-S.btnAll.onclick=()=>{ S.sFrom.value=''; S.sTo.value=''; calcPaid(); };
+el('btn-calc').onclick=()=> calcPaid();
+el('btn-all').onclick=()=>{ el('s-from').value=''; el('s-to').value=''; calcPaid(); };
 </script>
 </body>
 </html>
