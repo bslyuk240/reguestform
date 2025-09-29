@@ -9,7 +9,7 @@
   :root{--jm-primary:#08A045;--jm-dark:#0E141B;--jm-bg:#F6F8FA;--jm-border:#E7EAEE;}
   *{box-sizing:border-box}
   body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--jm-bg);color:#1f2937}
-  header{background:var(--jm-dark);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+  header{background:#0E141B;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
   .brand{display:flex;gap:10px;align-items:center}
   .brand img{width:28px;height:28px;border-radius:6px;object-fit:cover}
   .brand b{font-size:16px}
@@ -21,7 +21,7 @@
   .row{display:flex;gap:12px;flex-wrap:wrap}
   .row>*{flex:1 1 240px}
   input,select{width:100%;padding:10px;border:1px solid #d8dbe0;border-radius:10px;font:inherit}
-  table{width:100%;border-collapse:collapse} th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+  table{width:100%;border-collapse:collapse} th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
   .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px}
   .Pending{background:#fff3cd;border:1px solid #ffe69c}
   .Approved{background:#d1e7dd;border:1px solid #a3cfbb}
@@ -29,6 +29,7 @@
   .Paid{background:#cff4fc;border:1px solid #9eeaf9}
   .hidden{display:none}
   .foot{font-size:12px;color:#6b7280}
+  .big{font-size:28px;font-weight:700}
 </style>
 </head>
 <body>
@@ -68,6 +69,23 @@
     <p><a class="btn" href="staff.html" style="text-decoration:none">Go to Staff</a></p>
   </section>
 
+  <!-- Stats: Total Paid (with date filters) -->
+  <section id="stats" class="card hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div>
+        <h3>Total Paid (any period)</h3>
+        <div class="foot">Choose dates or leave empty for all-time.</div>
+        <div class="row" style="margin-top:8px;max-width:520px">
+          <div><input type="date" id="s-from"></div>
+          <div><input type="date" id="s-to"></div>
+          <div><button id="btn-calc" class="btn" type="button">Calculate</button></div>
+          <div><button id="btn-all" class="btn" type="button">All-time</button></div>
+        </div>
+      </div>
+      <div id="paid-total" class="big">GBP 0.00</div>
+    </div>
+  </section>
+
   <!-- Admin dashboard -->
   <section id="admin" class="hidden">
     <div class="card" style="display:flex;justify-content:space-between;align-items:center">
@@ -103,30 +121,29 @@ const sb = supabase.createClient(
 
 const el=id=>document.getElementById(id);
 const S={who:el('whoami'),btnOut:el('btn-signout'),auth:el('auth'),authMsg:el('auth-msg'),
-         loginBtn:el('btn-login'),noAdmin:el('no-admin'),admin:el('admin'),
-         tbody:document.querySelector('#admin-table tbody')};
-let user=null;
-let LOAD_SEQ=0;   // request guard
-let INITIALIZED=false;
+         loginBtn:el('btn-login'),noAdmin:el('no-admin'),admin:el('admin'),stats:el('stats'),
+         tbody:document.querySelector('#admin-table tbody'), paidTotal:el('paid-total'),
+         sFrom:el('s-from'), sTo:el('s-to'), btnCalc:el('btn-calc'), btnAll:el('btn-all')};
 
-function show(sec){[S.auth,S.noAdmin,S.admin].forEach(x=>x.classList.add('hidden'));sec.classList.remove('hidden');}
+let user=null, LOAD_SEQ=0, INITIALIZED=false;
+
+function show(sec){[S.auth,S.noAdmin,S.admin,S.stats].forEach(x=>x.classList.add('hidden'));sec.classList.remove('hidden');}
 function setBusy(b,t){if(!b)return;b.dataset.prev=b.textContent;b.textContent=t;b.disabled=true;}
 function clearBusy(b){if(!b)return;b.textContent=b.dataset.prev||b.textContent;b.disabled=false;}
 
 async function init(){
-  const {data:{session},error}=await sb.auth.getSession();
-  if(error)console.warn(error);
+  const {data:{session}}=await sb.auth.getSession();
   user=session?.user??null;
   if(!user){S.who.textContent='';S.btnOut.classList.add('hidden');show(S.auth);return;}
   S.who.textContent=user.email;S.btnOut.classList.remove('hidden');
   const prof=await sb.from('profiles').select('role').eq('user_id',user.id).maybeSingle();
-  const role=prof.data?.role;
-  if(role!=='admin'){show(S.noAdmin);return;}
-  show(S.admin);loadAdmin();
+  if((prof.data?.role||'staff')!=='admin'){show(S.noAdmin);return;}
+  S.stats.classList.remove('hidden'); show(S.admin);
+  loadAdmin(); calcPaid(); // initial
 }
 function initOnce(){if(INITIALIZED)return;INITIALIZED=true;init();}
-sb.auth.onAuthStateChange(()=>initOnce());initOnce();
-S.btnOut.onclick=async()=>{await sb.auth.signOut();location.reload();};
+sb.auth.onAuthStateChange(()=>initOnce()); initOnce();
+S.btnOut.onclick=async()=>{await sb.auth.signOut();location.href='staff.html';};
 S.loginBtn.onclick=async(e)=>{e.preventDefault();const email=el('email').value.trim(),pw=el('password').value.trim();
  if(!email||!pw){S.authMsg.textContent='Enter email & password.';return;}
  setBusy(S.loginBtn,'Logging in…');try{const {error}=await sb.auth.signInWithPassword({email,password:pw});
@@ -137,21 +154,22 @@ function fmt(a,c){return `${c} ${Number(a).toFixed(2)}`;}
 async function signedUrl(path){if(!path)return'';const {data}=await sb.storage.from('receipts').createSignedUrl(path,600);return data?.signedUrl||'';}
 
 async function fetchRequests(filters={}){let q=sb.from('requests').select('*, profiles:user_id(full_name,user_id)').order('created_at',{ascending:false});
- if(filters.status)q=q.eq('status',filters.status);if(filters.kind)q=q.eq('kind',filters.kind);
- if(filters.from)q=q.gte('created_at',filters.from+'T00:00:00Z');if(filters.to)q=q.lte('created_at',filters.to+'T23:59:59Z');
+ if(filters.status)q=q.eq('status',filters.status); if(filters.kind)q=q.eq('kind',filters.kind);
+ if(filters.from)q=q.gte('created_at',filters.from+'T00:00:00Z'); if(filters.to)q=q.lte('created_at',filters.to+'T23:59:59Z');
  const {data,error}=await q;if(error)throw error;return data;}
 
+let LOAD_GUARD=0;
 async function loadAdmin(filters={}) {
-  const seq=++LOAD_SEQ;S.tbody.innerHTML='<tr><td colspan="7">Loading…</td></tr>';
+  const seq=++LOAD_GUARD; S.tbody.innerHTML='<tr><td colspan="7">Loading…</td></tr>';
   try{
     const data=await fetchRequests(filters);
-    if(seq!==LOAD_SEQ)return; // stale
+    if(seq!==LOAD_GUARD) return;
     S.tbody.innerHTML='';
     for(const r of data){
       const name=r.profiles?.full_name||(r.user_id||'').slice(0,8);
       const {data:notes}=await sb.from('request_notes').select('*').eq('request_id',r.id);
       const rec=(notes||[]).find(n=>n.note.startsWith('receipt:'));
-      let link='';if(rec){const url=await signedUrl(rec.note.replace('receipt:',''));if(url)link=`<a href="${url}" target="_blank">View</a>`;}
+      let link=''; if(rec){const url=await signedUrl(rec.note.replace('receipt:','')); if(url) link=`<a href="${url}" target="_blank" rel="noopener">View</a>`;}
       S.tbody.insertAdjacentHTML('beforeend',
         `<tr>
           <td>${new Date(r.created_at).toLocaleDateString()}</td>
@@ -168,33 +186,59 @@ async function loadAdmin(filters={}) {
         </tr>`);
     }
     document.querySelectorAll('[data-act]').forEach(b=>b.onclick=onAction);
-  }catch(err){if(seq!==LOAD_SEQ)return;S.tbody.innerHTML=`<tr><td colspan="7">${err.message}</td></tr>`;}
+  }catch(err){if(seq!==LOAD_GUARD) return; S.tbody.innerHTML=`<tr><td colspan="7">${err.message}</td></tr>`;}
 }
 
 async function onAction(e){
   const id=e.target.dataset.id,act=e.target.dataset.act;
   try{
-    if(act==='approve'||act==='decline'){const status=act==='approve'?'Approved':'Declined';
+    if(act==='approve'||act==='decline'){
+      const status=act==='approve'?'Approved':'Declined';
       await sb.from('requests').update({status}).eq('id',id);
       await sb.from('request_notes').insert({request_id:id,author_id:user.id,note:`Status -> ${status}`});
-    }else if(act==='pay'){const method=prompt('Payment method:','Transfer');if(method===null)return;
-      const ref=prompt('Reference / Txn ID:','');
-      await sb.from('payouts').insert({request_id:id,paid_by:user.id,method,reference:ref});
+    }else if(act==='pay'){
+      const method=prompt('Payment method (e.g., Transfer, Cash, PayPal):','Transfer'); if(method===null)return;
+      const reference=prompt('Reference / Transaction ID:','');
+      await sb.from('payouts').insert({request_id:id,paid_by:user.id,method,reference});
       await sb.from('requests').update({status:'Paid'}).eq('id',id);
-      await sb.from('request_notes').insert({request_id:id,author_id:user.id,note:`Status -> Paid (${method} ${ref||''})`});}
-    loadAdmin();
+      await sb.from('request_notes').insert({request_id:id,author_id:user.id,note:`Status -> Paid (${method} ${reference||''})`});
+    }
+    loadAdmin(readFilters());
+    calcPaid(); // refresh stats if something became Paid
   }catch(err){alert(err.message||String(err));}
 }
 
-el('btn-filter').onclick=()=>loadAdmin({status:el('f-status').value||null,kind:el('f-kind').value||null,
- from:el('f-from').value||null,to:el('f-to').value||null});
-el('btn-clear').onclick=()=>{el('f-status').value='';el('f-kind').value='';el('f-from').value='';el('f-to').value='';loadAdmin();};
+function readFilters(){ return {
+  status: el('f-status').value || null,
+  kind:   el('f-kind').value   || null,
+  from:   el('f-from').value   || null,
+  to:     el('f-to').value     || null
+};}
+el('btn-filter').onclick=()=> loadAdmin(readFilters());
+el('btn-clear').onclick=()=>{el('f-status').value='';el('f-kind').value='';el('f-from').value='';el('f-to').value='';loadAdmin({});};
+
+/* Export CSV */
 el('btn-export').onclick=async()=>{const {data,error}=await sb.from('requests').select('*').order('created_at',{ascending:false});
  if(error){alert(error.message);return;}const rows=[['created_at','user_id','kind','amount','currency','needed_by','status','updated_at','id']];
  data.forEach(r=>rows.push([r.created_at,r.user_id,r.kind,r.amount,r.currency,r.needed_by||'',r.status,r.updated_at,r.id]));
  const csv=rows.map(r=>r.map(x=>`"${String(x).replaceAll('"','""')}"`).join(',')).join('\n');
- const blob=new Blob([csv],{type:'text/csv'});const url=URL.createObjectURL(blob);const a=document.createElement('a');
- a.href=url;a.download='julinemart_requests.csv';a.click();URL.revokeObjectURL(url);};
+ const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='julinemart_requests.csv'; a.click(); URL.revokeObjectURL(url);};
+
+/* ====== STATS: Total Paid (single sum, by date range) ====== */
+async function calcPaid(){
+  const from=S.sFrom.value? S.sFrom.value+'T00:00:00Z' : null;
+  const to=S.sTo.value? S.sTo.value+'T23:59:59Z' : null;
+
+  let q=sb.from('requests').select('amount').eq('status','Paid');
+  if(from) q=q.gte('created_at', from);
+  if(to) q=q.lte('created_at', to);
+  const {data,error}=await q;
+  if(error){ S.paidTotal.textContent='Error'; return; }
+  const sum=(data||[]).reduce((acc,r)=> acc + Number(r.amount||0), 0);
+  S.paidTotal.textContent = `GBP ${sum.toFixed(2)}`;
+}
+S.btnCalc.onclick=()=> calcPaid();
+S.btnAll.onclick=()=>{ S.sFrom.value=''; S.sTo.value=''; calcPaid(); };
 </script>
 </body>
 </html>
