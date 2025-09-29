@@ -19,13 +19,13 @@
   .brand img{width:28px;height:28px;border-radius:6px;object-fit:cover}
   .brand h1{font-size:16px;margin:0}
   .sub{opacity:.75;font-size:12px;margin-top:2px}
-  .btn{cursor:pointer;padding:9px 12px;border-radius:9px;border:1px solid var(--jm-border);background:#fff}
+  .btn{cursor:pointer;padding:8px 10px;border-radius:8px;border:1px solid var(--jm-border);background:#fff}
   .btn.primary{background:var(--jm-primary);color:#fff;border-color:transparent}
   .btn[disabled]{opacity:.6;cursor:not-allowed}
   main{max-width:1100px;margin:24px auto;padding:0 16px}
   .card{background:#fff;border:1px solid var(--jm-border);border-radius:12px;padding:16px;margin-bottom:16px}
   label{display:block;font-size:12px;color:#374151;margin-bottom:6px}
-  input,select,textarea{width:100%;padding:10px;border:1px solid #d8dbe0;border-radius:10px;font:inherit}
+  input,select,textarea{width:100%;padding:9px;border:1px solid #d8dbe0;border-radius:10px;font:inherit}
   textarea{min-height:90px}
   .row{display:flex;gap:12px;flex-wrap:wrap}
   .row>*{flex:1 1 240px}
@@ -41,14 +41,21 @@
   .foot-note{font-size:12px;color:#6b7280}
   .hidden{display:none}
 
-  /* one-line filters */
-  .filters{display:flex; gap:8px; align-items:flex-end; flex-wrap:nowrap}
-  .filters > *{flex:0 0 auto}
-  .filters select{min-width:130px}
-  .filters input[type="date"]{width:140px}
-  .filters input[type="search"]{width:220px}
-  @media (max-width: 720px){
-    .filters{flex-wrap:wrap}
+  /* One-line compact filters. Scroll horizontally if needed (no wrapping) */
+  .filters{
+    display:flex; align-items:center; gap:8px; flex-wrap:nowrap;
+    overflow-x:auto; padding-bottom:4px;
+  }
+  .filters::-webkit-scrollbar{height:6px}
+  .filters::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:4px}
+  .filters select{min-width:140px; height:34px}
+  .filters input[type="date"]{width:130px; height:34px}
+  .filters input[type="search"]{width:200px; height:34px}
+  .filters .btn{height:34px; padding:0 10px}
+
+  /* Optional: keep Comment column tidy */
+  #mine-table td:nth-child(4){
+    max-width:460px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
 </style>
 </head>
@@ -113,8 +120,8 @@
 
   <!-- MY REQUESTS (Date — Status — Amount — Comment) -->
   <section class="card hidden" id="page-mine">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <h3>My Requests</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+      <h3 style="margin:0">My Requests</h3>
       <div class="filters">
         <select id="f-status">
           <option value="">Status: All</option>
@@ -135,10 +142,8 @@
   </section>
 </main>
 
-<!-- Supabase UMD -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
-/* Supabase client */
 const sb = supabase.createClient(
   "https://hmguraxzebhspednbbav.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o"
@@ -152,15 +157,15 @@ let currentUser = null;
 let INITIALIZED = false;
 let LOAD_SEQ = 0;
 
-function hide(elm){ elm.classList.add('hidden'); }
-function show(elm){ elm.classList.remove('hidden'); }
+function hide(x){ x.classList.add('hidden'); }
+function show(x){ x.classList.remove('hidden'); }
 
 btnSignout.onclick = async ()=>{ await sb.auth.signOut(); location.reload(); };
 
 function setBusy(button, txt){ if(!button) return; button.dataset.prev = button.textContent; button.textContent = txt; button.disabled = true; }
 function clearBusy(button){ if(!button) return; button.disabled = false; button.textContent = button.dataset.prev || button.textContent; }
 
-/* ===== INIT + Realtime ===== */
+/* INIT */
 async function init(){
   const { data:{ session } } = await sb.auth.getSession();
   currentUser = session?.user ?? null;
@@ -168,7 +173,7 @@ async function init(){
   if(currentUser){
     whoami.textContent = currentUser.email;
     show(btnSignout);
-    hide(signinCard);          // <<< hide login when logged in
+    hide(signinCard);
     show(pageNew);
     show(pageMine);
     loadMine();
@@ -184,6 +189,7 @@ async function init(){
 function initOnce(){ if (INITIALIZED) return; INITIALIZED = true; init(); }
 sb.auth.onAuthStateChange(()=>initOnce()); initOnce();
 
+/* Realtime refresh */
 let rtChannel = null;
 function enableRealtime(){
   try{
@@ -194,7 +200,7 @@ function enableRealtime(){
   }catch(e){ console.warn('Realtime subscribe failed', e); }
 }
 
-/* ===== AUTH ===== */
+/* AUTH */
 el('btn-login').onclick = async (e)=>{
   e.preventDefault();
   const btn = e.currentTarget;
@@ -205,7 +211,6 @@ el('btn-login').onclick = async (e)=>{
   try{
     const { error } = await sb.auth.signInWithPassword({ email, password });
     if(error) throw error;
-    // session will trigger onAuthStateChange -> init()
   }catch(err){ el('signin-msg').textContent = err.message || String(err); }
   finally{ clearBusy(btn); }
 };
@@ -220,18 +225,13 @@ el('btn-register').onclick = async (e)=>{
   try{
     const { data, error } = await sb.auth.signUp({ email, password });
     if(error) throw error;
-    if(data && data.session){
-      // logged in right away
-      init();
-    }else{
-      el('signin-msg').textContent = "Registered! Please log in.";
-    }
+    if(!data.session){ el('signin-msg').textContent = "Registered! Please log in."; }
   }catch(err){
     el('signin-msg').textContent = err.message || String(err);
   }finally{ clearBusy(btn); }
 };
 
-/* ===== Upload receipts ===== */
+/* Upload receipts */
 async function uploadOne(file){
   const ext=(file.name.split('.').pop()||'bin').toLowerCase();
   const path=`receipts/${currentUser.id}/${crypto.randomUUID()}.${ext}`;
@@ -240,7 +240,7 @@ async function uploadOne(file){
   return data.path;
 }
 
-/* ===== Submit new request ===== */
+/* Submit request */
 el('submit-request').onclick = async (e)=>{
   e.preventDefault();
   try{
@@ -257,8 +257,7 @@ el('submit-request').onclick = async (e)=>{
       .select().single();
     if(error){ el('new-msg').textContent = error.message; return; }
 
-    const files = [...el('receipts').files];
-    for (const f of files){
+    for (const f of [...el('receipts').files]){
       const p = await uploadOne(f);
       if(p) await sb.from('request_notes').insert({ request_id: req.id, author_id: currentUser.id, note:`receipt:${p}` });
     }
@@ -269,7 +268,7 @@ el('submit-request').onclick = async (e)=>{
   }catch(err){ el('new-msg').textContent = err.message || String(err); }
 };
 
-/* ===== Helpers ===== */
+/* Helpers */
 function pill(s){ return `<span class="pill ${s}">${s}</span>`; }
 function fmt(a,c){ return `${c} ${Number(a).toFixed(2)}`; }
 async function latestAdminComment(requestId){
@@ -282,13 +281,13 @@ async function latestAdminComment(requestId){
   return comments.length ? comments[0].note : '';
 }
 
-/* ===== Filters ===== */
+/* Filters */
 el('btn-apply').onclick = ()=> loadMine(readFilters());
 el('btn-clear').onclick = ()=>{ el('f-status').value=''; el('f-from').value=''; el('f-to').value=''; el('f-q').value=''; loadMine({}); };
 el('btn-refresh').onclick = ()=> loadMine(readFilters());
 function readFilters(){ return { status:el('f-status').value||null, from:el('f-from').value||null, to:el('f-to').value||null, q:el('f-q').value.trim()||null }; }
 
-/* ===== Load list (Date — Status — Amount — Comment) ===== */
+/* Load list */
 async function loadMine(filters={}){
   const seq = ++LOAD_SEQ;
   const tbody=document.querySelector('#mine-table tbody');
