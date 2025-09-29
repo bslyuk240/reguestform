@@ -101,7 +101,7 @@
     <p id="new-msg" class="foot-note"></p>
   </section>
 
-  <!-- MY REQUESTS (now includes COMMENT column with latest admin note) -->
+  <!-- MY REQUESTS (Date — Status — Amount — Comment) -->
   <section class="card hidden" id="page-mine">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <h3>My Requests</h3>
@@ -122,46 +122,33 @@
       <thead><tr><th>Date</th><th>Status</th><th>Amount</th><th>Comment</th></tr></thead>
       <tbody></tbody>
     </table>
-    <p class="foot-note" style="margin-top:10px">Admin? <a class="switch" href="admin.html">Go to Admin</a></p>
-  </section>
-
-  <!-- Paid History (unchanged) -->
-  <section class="card hidden" id="page-paid">
-    <h3>Paid History (by month)</h3>
-    <div style="overflow:auto">
-      <table id="paid-table">
-        <thead><tr><th>Month</th><th>Total Paid</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
   </section>
 </main>
 
 <!-- Supabase UMD -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
-/* Supabase */
+/* Supabase client */
 const sb = supabase.createClient(
   "https://hmguraxzebhspednbbav.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o"
 );
 
 const el = id => document.getElementById(id);
-const signinCard = el('signin-card'), pageNew = el('page-new'), pageMine = el('page-mine'), pagePaid = el('page-paid');
+const signinCard = el('signin-card'), pageNew = el('page-new'), pageMine = el('page-mine');
 const whoami = el('whoami'), btnSignout = el('btn-signout');
-let currentUser = null;
 
-/* guards */
+let currentUser = null;
 let INITIALIZED = false;
 let LOAD_SEQ = 0;
 
-function show(section){ [signinCard,pageNew,pageMine,pagePaid].forEach(s=>s.classList.add('hidden')); section.classList.remove('hidden'); }
+function show(section){ [signinCard,pageNew,pageMine].forEach(s=>s.classList.add('hidden')); section.classList.remove('hidden'); }
 btnSignout.onclick = async ()=>{ await sb.auth.signOut(); location.reload(); };
 
 function setBusy(button, txt){ if(!button) return; button.dataset.prev = button.textContent; button.textContent = txt; button.disabled = true; }
 function clearBusy(button){ if(!button) return; button.disabled = false; button.textContent = button.dataset.prev || button.textContent; }
 
-/* ====== INIT + Realtime ====== */
+/* ===== INIT + Realtime ===== */
 async function init(){
   const { data:{ session } } = await sb.auth.getSession();
   currentUser = session?.user ?? null;
@@ -171,7 +158,6 @@ async function init(){
     btnSignout.classList.remove('hidden');
     show(pageNew);
     loadMine();
-    loadPaidHistory();
     enableRealtime();
   }else{
     whoami.textContent = "";
@@ -187,12 +173,12 @@ function enableRealtime(){
   try{
     if(rtChannel) sb.removeChannel(rtChannel);
     rtChannel = sb.channel('req-status-'+currentUser.id)
-      .on('postgres_changes',{ event:'*', schema:'public', table:'requests', filter:`user_id=eq.${currentUser.id}`}, ()=>{ loadMine(); loadPaidHistory(); })
+      .on('postgres_changes',{ event:'*', schema:'public', table:'requests', filter:`user_id=eq.${currentUser.id}`}, ()=> loadMine())
       .subscribe();
   }catch(e){ console.warn('Realtime subscribe failed', e); }
 }
 
-/* ====== AUTH ====== */
+/* ===== AUTH ===== */
 el('btn-login').onclick = async (e)=>{
   e.preventDefault();
   const btn = e.currentTarget;
@@ -225,7 +211,7 @@ el('btn-register').onclick = async (e)=>{
   }finally{ clearBusy(btn); }
 };
 
-/* ====== Upload receipts ====== */
+/* ===== Upload receipts ===== */
 async function uploadOne(file){
   const ext=(file.name.split('.').pop()||'bin').toLowerCase();
   const path=`receipts/${currentUser.id}/${crypto.randomUUID()}.${ext}`;
@@ -234,7 +220,7 @@ async function uploadOne(file){
   return data.path;
 }
 
-/* ====== Submit new request ====== */
+/* ===== Submit new request ===== */
 el('submit-request').onclick = async (e)=>{
   e.preventDefault();
   try{
@@ -259,11 +245,11 @@ el('submit-request').onclick = async (e)=>{
 
     el('new-msg').textContent = "Request submitted.";
     el('amount').value=""; el('description').value=""; el('needed_by').value=""; el('receipts').value="";
-    loadMine(); loadPaidHistory();
+    loadMine();
   }catch(err){ el('new-msg').textContent = err.message || String(err); }
 };
 
-/* ====== Helpers ====== */
+/* ===== Helpers ===== */
 function pill(s){ return `<span class="pill ${s}">${s}</span>`; }
 function fmt(a,c){ return `${c} ${Number(a).toFixed(2)}`; }
 async function latestAdminComment(requestId){
@@ -277,13 +263,13 @@ async function latestAdminComment(requestId){
   return comments.length ? comments[0].note : '';
 }
 
-/* ====== Filters ====== */
+/* ===== Filters ===== */
 el('btn-apply').onclick = ()=> loadMine(readFilters());
 el('btn-clear').onclick = ()=>{ el('f-status').value=''; el('f-from').value=''; el('f-to').value=''; el('f-q').value=''; loadMine({}); };
 el('btn-refresh').onclick = ()=> loadMine(readFilters());
 function readFilters(){ return { status:el('f-status').value||null, from:el('f-from').value||null, to:el('f-to').value||null, q:el('f-q').value.trim()||null }; }
 
-/* ====== Load list (with Comment column) ====== */
+/* ===== Load list (Date — Status — Amount — Comment) ===== */
 async function loadMine(filters={}){
   const seq = ++LOAD_SEQ;
   const tbody=document.querySelector('#mine-table tbody');
@@ -313,34 +299,7 @@ async function loadMine(filters={}){
   }
 }
 
-/* ====== Paid History (monthly) ====== */
-async function loadPaidHistory(){
-  const tbody = document.querySelector('#paid-table tbody');
-  tbody.innerHTML = '<tr><td colspan="2">Loading…</td></tr>';
-  const { data, error } = await sb
-    .from('requests')
-    .select('amount, currency, created_at')
-    .eq('user_id', currentUser.id)
-    .eq('status', 'Paid')
-    .order('created_at',{ascending:false});
-  if(error){ tbody.innerHTML = `<tr><td colspan="2">${error.message}</td></tr>`; return; }
-
-  const groups = {};
-  for(const r of data){
-    const d = new Date(r.created_at);
-    const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    groups[ym] = (groups[ym] || 0) + Number(r.amount || 0);
-  }
-  const rows = Object.entries(groups).sort((a,b)=> a[0]<b[0]?1:-1);
-  tbody.innerHTML = rows.length? '' : '<tr><td colspan="2">No paid items yet.</td></tr>';
-  for(const [ym, total] of rows){
-    tbody.insertAdjacentHTML('beforeend', `<tr><td>${ym}</td><td>GBP ${total.toFixed(2)}</td></tr>`);
-  }
-
-  pagePaid.classList.remove('hidden');
-}
-
-/* PWA */
+/* PWA (kept) */
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js').catch(()=>{}); }
 </script>
 </body>
