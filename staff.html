@@ -166,46 +166,121 @@ sb.auth.onAuthStateChange(readSessionAndRender); readSessionAndRender();
 const sMsg = document.getElementById('signin-msg');
 document.getElementById('staff-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  sMsg.textContent = 'Logging in…';
+  sMsg.style.color = '#666';
+  sMsg.textContent = 'Logging in...';
+  
   try {
     const email = document.getElementById('email').value.trim();
-    const pw    = document.getElementById('password').value.trim();
-    if (!email || !pw) { sMsg.textContent = 'Enter email & password.'; return; }
-
-    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
-    if (error) throw error;
-
-    // Use returned session immediately
-    if (!data?.session) {
-      const g = await sb.auth.getSession();
-      if (!g?.data?.session) {
-        sMsg.textContent = 'Logged in, but no session was created. Clear cache/service worker and retry.';
-        return;
-      }
+    const pw = document.getElementById('password').value.trim();
+    
+    if (!email || !pw) {
+      sMsg.style.color = '#c00';
+      sMsg.textContent = 'Enter email & password.';
+      return;
     }
 
-    sMsg.textContent = 'Welcome.';
+    console.log('Attempting login for:', email);
+
+    // Sign in
+    const { data, error } = await sb.auth.signInWithPassword({ 
+      email, 
+      password: pw 
+    });
+    
+    if (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+
+    console.log('Login response:', data);
+
+    // Wait a moment for session to be persisted
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Verify session exists
+    const { data: sessionCheck } = await sb.auth.getSession();
+    console.log('Session check:', sessionCheck);
+
+    if (!sessionCheck?.session) {
+      sMsg.style.color = '#c00';
+      sMsg.textContent = 'Login succeeded but session not created. Try clearing your browser cache and cookies, then reload.';
+      return;
+    }
+
+    // Success
+    me = sessionCheck.session.user;
+    UI.who.textContent = me.email;
+    sMsg.style.color = '#0a0';
+    sMsg.textContent = 'Welcome!';
+    
     setLoggedInUI(true);
-    await readSessionAndRender();
+    await loadMyRequests();
+    
   } catch (err) {
     console.error('Staff login failed:', err);
-    sMsg.textContent = (err && err.message) || String(err);
+    sMsg.style.color = '#c00';
+    
+    // More helpful error messages
+    if (err.message?.includes('Invalid login credentials')) {
+      sMsg.textContent = 'Invalid email or password.';
+    } else if (err.message?.includes('Email not confirmed')) {
+      sMsg.textContent = 'Please verify your email first.';
+    } else {
+      sMsg.textContent = err.message || String(err);
+    }
   }
 });
 
 /* Register */
-$('btn-register').onclick=async(e)=>{
+$('btn-register').onclick = async(e) => {
   e.preventDefault();
-  UI.msg.textContent='Registering…';
-  try{
-    const email=$('email').value.trim(), pw=$('password').value.trim();
-    if(!email||!pw){ UI.msg.textContent='Enter email & password.'; return; }
-    const {data, error}=await sb.auth.signUp({email,password:pw});
-    if(error) throw error;
-    const {data:s}=await sb.auth.getSession();
-    if(s?.session){ UI.msg.textContent='Registered & signed in.'; setLoggedInUI(true); await readSessionAndRender(); }
-    else { UI.msg.textContent='Registered. Please log in.'; }
-  }catch(err){ console.error(err); UI.msg.textContent=(err&&err.message)||String(err); }
+  UI.msg.style.color = '#666';
+  UI.msg.textContent = 'Registering...';
+  
+  try {
+    const email = $('email').value.trim();
+    const pw = $('password').value.trim();
+    
+    if (!email || !pw) {
+      UI.msg.style.color = '#c00';
+      UI.msg.textContent = 'Enter email & password.';
+      return;
+    }
+    
+    console.log('Attempting registration for:', email);
+    
+    const { data, error } = await sb.auth.signUp({
+      email,
+      password: pw,
+      options: {
+        emailRedirectTo: window.location.origin + '/staff.html'
+      }
+    });
+    
+    if (error) throw error;
+    
+    console.log('Registration response:', data);
+    
+    // Wait for session
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const { data: s } = await sb.auth.getSession();
+    
+    if (s?.session) {
+      me = s.session.user;
+      UI.who.textContent = me.email;
+      UI.msg.style.color = '#0a0';
+      UI.msg.textContent = 'Registered & signed in.';
+      setLoggedInUI(true);
+      await readSessionAndRender();
+    } else {
+      UI.msg.style.color = '#0a0';
+      UI.msg.textContent = 'Registered. Please check your email to confirm, then log in.';
+    }
+  } catch (err) {
+    console.error('Registration error:', err);
+    UI.msg.style.color = '#c00';
+    UI.msg.textContent = err.message || String(err);
+  }
 };
 
 /* Sign out */
