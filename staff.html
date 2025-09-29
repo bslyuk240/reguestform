@@ -41,22 +41,14 @@
   .foot-note{font-size:12px;color:#6b7280}
   .hidden{display:none}
 
-  /* One-line compact filters. Scroll horizontally if needed (no wrapping) */
-  .filters{
-    display:flex; align-items:center; gap:8px; flex-wrap:nowrap;
-    overflow-x:auto; padding-bottom:4px;
-  }
-  .filters::-webkit-scrollbar{height:6px}
-  .filters::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:4px}
+  /* one-line compact filters with horizontal scroll if needed */
+  .filters{display:flex; align-items:center; gap:8px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px}
   .filters select{min-width:140px; height:34px}
   .filters input[type="date"]{width:130px; height:34px}
   .filters input[type="search"]{width:200px; height:34px}
   .filters .btn{height:34px; padding:0 10px}
 
-  /* Optional: keep Comment column tidy */
-  #mine-table td:nth-child(4){
-    max-width:460px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  }
+  #mine-table td:nth-child(4){ max-width:460px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 </style>
 </head>
 <body>
@@ -79,6 +71,7 @@
   <div class="card" id="signin-card">
     <h3>Staff Access</h3>
     <div class="row">
+      <div><label>Name</label><input type="text" id="full_name" placeholder="Your name (display)" autocomplete="name"></div>
       <div><label>Email</label><input type="email" id="email" placeholder="you@julinemart.com" autocomplete="username"></div>
       <div><label>Password</label><input type="password" id="password" placeholder="Enter password" autocomplete="current-password"></div>
     </div>
@@ -118,7 +111,7 @@
     <p id="new-msg" class="foot-note"></p>
   </section>
 
-  <!-- MY REQUESTS (Date — Status — Amount — Comment) -->
+  <!-- MY REQUESTS -->
   <section class="card hidden" id="page-mine">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
       <h3 style="margin:0">My Requests</h3>
@@ -171,7 +164,9 @@ async function init(){
   currentUser = session?.user ?? null;
 
   if(currentUser){
-    whoami.textContent = currentUser.email;
+    // show friendly name if available
+    const name = await getDisplayName(currentUser.id, currentUser.email);
+    whoami.textContent = name;
     show(btnSignout);
     hide(signinCard);
     show(pageNew);
@@ -188,6 +183,11 @@ async function init(){
 }
 function initOnce(){ if (INITIALIZED) return; INITIALIZED = true; init(); }
 sb.auth.onAuthStateChange(()=>initOnce()); initOnce();
+
+async function getDisplayName(uid, fallbackEmail){
+  const { data } = await sb.from('profiles').select('full_name,email').eq('user_id',uid).maybeSingle();
+  return (data?.full_name && data.full_name.trim()) || data?.email || fallbackEmail || (uid||'').slice(0,8);
+}
 
 /* Realtime refresh */
 let rtChannel = null;
@@ -220,12 +220,24 @@ el('btn-register').onclick = async (e)=>{
   const btn = e.currentTarget;
   const email = el('email').value.trim();
   const password = el('password').value.trim();
+  const full_name = el('full_name').value.trim();
   if(!email || !password){ el('signin-msg').textContent = "Enter email & password."; return; }
   setBusy(btn, "Registering…");
   try{
     const { data, error } = await sb.auth.signUp({ email, password });
     if(error) throw error;
-    if(!data.session){ el('signin-msg').textContent = "Registered! Please log in."; }
+
+    // upsert profile with name/email (idempotent)
+    if (data.user) {
+      await sb.from('profiles').upsert({ user_id: data.user.id, email, full_name }, { onConflict: 'user_id' });
+    }
+
+    if(data && data.session){
+      // logged in right away
+      init();
+    }else{
+      el('signin-msg').textContent = "Registered! Please log in.";
+    }
   }catch(err){
     el('signin-msg').textContent = err.message || String(err);
   }finally{ clearBusy(btn); }
