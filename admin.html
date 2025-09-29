@@ -8,7 +8,7 @@
 <style>
   :root{--jm-primary:#08A045;--jm-dark:#0E141B;--jm-bg:#F6F8FA;--jm-border:#E7EAEE;}
   *{box-sizing:border-box}
-  body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#fff;color:#111}
+  body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:#fff;color:#111}
   header{background:#0E141B;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
   .brand{display:flex;gap:10px;align-items:center}
   .brand img{width:28px;height:28px;border-radius:6px;object-fit:cover}
@@ -31,6 +31,7 @@
   .hidden{display:none}
   .foot{font-size:12px;color:#6b7280}
   td.desc {max-width:360px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  #paid-totals { font-size:14px; background:#f6f8fa; border:1px solid #e7eaee; padding:6px 10px; border-radius:8px; }
 </style>
 </head>
 <body>
@@ -63,49 +64,35 @@
     <p id="auth-msg" class="foot"></p>
   </section>
 
-  <!-- Stats: Total Paid -->
-  <section id="stats" class="card hidden">
-    <div class="row" style="align-items:center">
-      <div>
-        <h3>Total Paid (choose dates or leave empty for all-time)</h3>
-        <div class="row">
-          <div><input type="date" id="s-from"></div>
-          <div><input type="date" id="s-to"></div>
-          <div style="flex:0 0 auto"><button id="btn-calc" class="btn" type="button">Calculate</button></div>
-          <div style="flex:0 0 auto"><button id="btn-all" class="btn" type="button">All-time</button></div>
-        </div>
+  <!-- Header with filters + totals + export -->
+  <section id="admin-top" class="card hidden" style="display:flex;justify-content:space-between;align-items:center">
+    <div>
+      <h3 style="margin:0">All Requests</h3>
+      <div class="row" style="margin-top:8px">
+        <div><select id="f-status"><option value="">Status: All</option><option>Pending</option><option>Approved</option><option>Declined</option><option>Paid</option></select></div>
+        <div><select id="f-kind"><option value="">Type: All</option><option value="petty_cash">Petty Cash</option><option value="reimbursement">Reimbursement</option></select></div>
+        <div><input id="f-from" type="date"></div>
+        <div><input id="f-to" type="date"></div>
+        <div style="flex:0 0 auto"><button id="btn-filter" class="btn" type="button">Apply</button></div>
+        <div style="flex:0 0 auto"><button id="btn-clear" class="btn" type="button">Clear</button></div>
       </div>
-      <div id="paid-total" style="font-size:28px;font-weight:700">GBP 0.00</div>
+    </div>
+    <div style="text-align:right">
+      <div id="paid-totals" title="Sum of PAID requests (respects date filters)">Totals: —</div>
+      <button id="btn-export" class="btn primary" type="button" style="margin-top:8px">Export CSV</button>
     </div>
   </section>
 
-  <!-- Admin dashboard -->
-  <section id="admin" class="hidden">
-    <div class="card" style="display:flex;justify-content:space-between;align-items:center">
-      <div>
-        <h3>All Requests</h3>
-        <div class="row" style="margin-top:8px">
-          <div><select id="f-status"><option value="">Status: All</option><option>Pending</option><option>Approved</option><option>Declined</option><option>Paid</option></select></div>
-          <div><select id="f-kind"><option value="">Type: All</option><option value="petty_cash">Petty Cash</option><option value="reimbursement">Reimbursement</option></select></div>
-          <div><input id="f-from" type="date"></div>
-          <div><input id="f-to" type="date"></div>
-          <div style="flex:0 0 auto"><button id="btn-filter" class="btn" type="button">Apply</button></div>
-          <div style="flex:0 0 auto"><button id="btn-clear" class="btn" type="button">Clear</button></div>
-        </div>
-      </div>
-      <div><button id="btn-export" class="btn primary" type="button">Export CSV</button></div>
-    </div>
-
-    <div class="card">
-      <table id="admin-table">
-        <thead>
-          <tr>
-            <th>Date</th><th>Staff</th><th>Type</th><th>Description</th><th>Amount</th><th>Status</th><th>Action</th><th>Receipt</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+  <!-- Admin table -->
+  <section id="admin-table-wrap" class="card hidden">
+    <table id="admin-table">
+      <thead>
+        <tr>
+          <th>Date</th><th>Staff</th><th>Type</th><th>Description</th><th>Amount</th><th>Status</th><th>Action</th><th>Receipt</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </section>
 </main>
 
@@ -117,46 +104,75 @@ const sb = supabase.createClient(
 );
 
 const el=id=>document.getElementById(id);
-const UI={who:el('whoami'),btnOut:el('btn-signout'),auth:el('auth'),authMsg:el('auth-msg'),
-          loginBtn:el('btn-login'),admin:el('admin'),stats:el('stats'),
-          tbody:document.querySelector('#admin-table tbody'), paidTotal:el('paid-total')};
+const UI={
+  who:el('whoami'), btnOut:el('btn-signout'),
+  auth:el('auth'), authMsg:el('auth-msg'), loginBtn:el('btn-login'),
+  top:el('admin-top'), tableWrap:el('admin-table-wrap'),
+  tbody:document.querySelector('#admin-table tbody'),
+  totals:el('paid-totals')
+};
 
 let user=null, INITIALIZED=false;
-function show(sec){[UI.auth,UI.admin,UI.stats].forEach(x=>x.classList.add('hidden'));sec.classList.remove('hidden');}
+function showAdmin(show){
+  UI.auth.classList.toggle('hidden', show);
+  UI.top.classList.toggle('hidden', !show);
+  UI.tableWrap.classList.toggle('hidden', !show);
+}
 
+/* ===== Init & auth ===== */
 async function init(){
   const {data:{session}}=await sb.auth.getSession();
   user=session?.user??null;
-  if(!user){UI.who.textContent='';UI.btnOut.classList.add('hidden');show(UI.auth);return;}
-  UI.who.textContent=user.email;UI.btnOut.classList.remove('hidden');
+  if(!user){
+    UI.who.textContent=''; UI.btnOut.classList.add('hidden'); showAdmin(false); return;
+  }
+  UI.who.textContent=user.email; UI.btnOut.classList.remove('hidden');
+
+  // must be admin
   const { data:prof } = await sb.from('profiles').select('role').eq('user_id',user.id).maybeSingle();
-  if((prof?.role||'staff')!=='admin'){show(UI.auth);UI.authMsg.textContent='Access denied (not admin).';return;}
-  UI.stats.classList.remove('hidden'); show(UI.admin);
-  await load(); calcPaid();
+  if((prof?.role||'staff')!=='admin'){
+    showAdmin(false); UI.auth.classList.remove('hidden');
+    UI.authMsg.textContent='Access denied (not admin).'; return;
+  }
+
+  showAdmin(true);
+  await load(); calcPaidTotals();
 }
-function initOnce(){ if(INITIALIZED) return; INITIALIZED = true; init(); }
+function initOnce(){ if(INITIALIZED) return; INITIALIZED=true; init(); }
 sb.auth.onAuthStateChange(()=>initOnce()); initOnce();
 
-UI.btnOut.onclick=async()=>{await sb.auth.signOut(); location.href='staff.html';};
-UI.loginBtn.onclick=async(e)=>{e.preventDefault();const email=el('email').value.trim(),pw=el('password').value.trim();
- if(!email||!pw){UI.authMsg.textContent='Enter email & password.';return;}
- const {error}=await sb.auth.signInWithPassword({email,password:pw}); if(error)UI.authMsg.textContent=error.message; else location.reload();};
+UI.loginBtn.onclick=async(e)=>{
+  e.preventDefault();
+  const email=el('email').value.trim(), pw=el('password').value.trim();
+  if(!email||!pw){ UI.authMsg.textContent='Enter email & password.'; return; }
+  const {error}=await sb.auth.signInWithPassword({email,password:pw});
+  if(error) UI.authMsg.textContent=error.message; else location.reload();
+};
+UI.btnOut.onclick=async()=>{ await sb.auth.signOut(); location.href='staff.html'; };
 
+/* ===== Helpers ===== */
 function pill(s){return `<span class="pill ${s}">${s}</span>`;}
-function fmt(a,c){return `${c} ${Number(a).toFixed(2)}`;}
-async function signedUrl(path){if(!path)return'';const {data}=await sb.storage.from('receipts').createSignedUrl(path,600);return data?.signedUrl||'';}
+function fmt(a,c){return `${c} ${Number(a||0).toFixed(2)}`;}
+async function signedUrl(path){ if(!path) return ''; const {data}=await sb.storage.from('receipts').createSignedUrl(path, 600); return data?.signedUrl||''; }
 
-/* Name lookup cache (no joins) */
+/* Staff name lookup (no joins; cached) */
 const nameCache=new Map();
 async function nameFor(user_id){
   if(nameCache.has(user_id)) return nameCache.get(user_id);
   const { data } = await sb.from('profiles').select('full_name,email').eq('user_id',user_id).maybeSingle();
   const name = (data?.full_name && data.full_name.trim()) || data?.email || (user_id||'').slice(0,8);
-  nameCache.set(user_id,name);
+  nameCache.set(user_id, name);
   return name;
 }
 
-/* Fetch requests (no joins) */
+/* ===== Data ===== */
+function readFilters(){ return {
+  status: el('f-status').value || null,
+  kind:   el('f-kind').value   || null,
+  from:   el('f-from').value   || null,
+  to:     el('f-to').value     || null
+};}
+
 async function fetchRequests(filters={}){
   let q=sb.from('requests').select('*').order('created_at',{ascending:false});
   if(filters.status) q=q.eq('status',filters.status);
@@ -169,7 +185,7 @@ async function fetchRequests(filters={}){
 }
 
 let LOAD_TOKEN=0;
-async function load(filters={}){
+async function load(filters=readFilters()){
   const token=++LOAD_TOKEN;
   UI.tbody.innerHTML='<tr><td colspan="8">Loading…</td></tr>';
   try{
@@ -180,7 +196,7 @@ async function load(filters={}){
       const staff = await nameFor(r.user_id);
       const { data:notes } = await sb.from('request_notes').select('note').eq('request_id',r.id);
       const rec=(notes||[]).find(n=>n.note.startsWith('receipt:'));
-      let link=''; if(rec){const url=await signedUrl(rec.note.replace('receipt:','')); if(url) link=`<a href="${url}" target="_blank" rel="noopener">View</a>`;}
+      let link=''; if(rec){ const url=await signedUrl(rec.note.replace('receipt:','')); if(url) link=`<a href="${url}" target="_blank" rel="noopener">View</a>`; }
 
       const selId=`sel-${r.id}`, cId=`com-${r.id}`, btnId=`btn-${r.id}`;
       const options=['Pending','Approved','Declined','Paid'].map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('');
@@ -203,38 +219,49 @@ async function load(filters={}){
           <td>${link}</td>
         </tr>
       `);
-      document.getElementById(btnId).onclick=()=>updateStatus(r.id, document.getElementById(selId).value, document.getElementById(cId).value.trim());
+
+      document.getElementById(btnId).onclick = ()=> updateStatus(r.id,
+        document.getElementById(selId).value,
+        document.getElementById(cId).value.trim()
+      );
     }
   }catch(err){
-    UI.tbody.innerHTML=`<tr><td colspan="8">${err.message||String(err)}</td></tr>`;
+    UI.tbody.innerHTML = `<tr><td colspan="8">${err.message||String(err)}</td></tr>`;
   }
 }
 
+/* ===== Update status (adds human comment + system log; inserts payout when Paid) ===== */
 async function updateStatus(id, next, comment){
   try{
     if(next==='Paid'){
-      const method=prompt('Payment method (e.g., Transfer, Cash, PayPal):','Transfer'); if(method===null) return;
-      const reference=prompt('Reference / Transaction ID:','');
+      const method = prompt('Payment method (e.g., Transfer, Cash, PayPal):','Transfer'); if(method===null) return;
+      const reference = prompt('Reference / Transaction ID:','');
       await sb.from('payouts').insert({ request_id:id, paid_by:user.id, method, reference });
     }
-    await sb.from('requests').update({ status:next }).eq('id',id);
+    await sb.from('requests').update({ status: next }).eq('id', id);
     if(comment){ await sb.from('request_notes').insert({ request_id:id, author_id:user.id, note: comment }); }
     await sb.from('request_notes').insert({ request_id:id, author_id:user.id, note:`Status -> ${next}` });
-    await load(readFilters()); calcPaid();
+    await load(); calcPaidTotals();
   }catch(err){ alert(err.message||String(err)); }
 }
 
-/* Filters */
-function readFilters(){ return {
-  status: el('f-status').value || null,
-  kind:   el('f-kind').value   || null,
-  from:   el('f-from').value   || null,
-  to:     el('f-to').value     || null
-};}
-el('btn-filter').onclick=()=> load(readFilters());
-el('btn-clear').onclick=()=>{ el('f-status').value=''; el('f-kind').value=''; el('f-from').value=''; el('f-to').value=''; load({}); };
+/* ===== Totals (Paid by currency; respects date filters) ===== */
+async function calcPaidTotals(){
+  const f=readFilters();
+  let q=sb.from('requests').select('amount,currency').eq('status','Paid');
+  if(f.from) q=q.gte('created_at', f.from+'T00:00:00Z');
+  if(f.to)   q=q.lte('created_at', f.to+'T23:59:59Z');
+  const { data, error } = await q;
+  if(error){ UI.totals.textContent='Totals: error'; return; }
+  const byCur=(data||[]).reduce((m,r)=>{ const cur=r.currency||'UNK'; m[cur]=(m[cur]||0)+Number(r.amount||0); return m; },{});
+  const parts=Object.entries(byCur).map(([cur,sum])=>`${cur} ${sum.toFixed(2)}`);
+  UI.totals.textContent = parts.length ? `Totals: ${parts.join(' • ')}` : 'Totals: 0';
+}
 
-/* Export CSV */
+/* ===== Filters + export ===== */
+el('btn-filter').onclick=()=>{ load(); calcPaidTotals(); };
+el('btn-clear').onclick =()=>{ el('f-status').value=''; el('f-kind').value=''; el('f-from').value=''; el('f-to').value=''; load(); calcPaidTotals(); };
+
 el('btn-export').onclick=async()=>{
   const { data, error } = await sb.from('requests').select('*').order('created_at',{ascending:false});
   if(error){ alert(error.message); return; }
@@ -242,27 +269,10 @@ el('btn-export').onclick=async()=>{
   (data||[]).forEach(r=>rows.push([
     r.created_at,r.user_id,r.kind,r.description||'',r.amount,r.currency,r.needed_by||'',r.status,r.updated_at,r.id
   ]));
-  const csv = rows.map(r=>r.map(x=>{
-    const s=String(x==null?'':x); return '"'+s.split('"').join('""')+'"';
-  }).join(',')).join('\n');
+  const csv = rows.map(r=>r.map(x=>{ const s=String(x==null?'':x); return '"'+s.split('"').join('""')+'"'; }).join(',')).join('\n');
   const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download='julinemart_requests.csv'; a.click(); URL.revokeObjectURL(url);
 };
-
-/* Stats: Total Paid */
-async function calcPaid(){
-  const from=el('s-from').value? el('s-from').value+'T00:00:00Z' : null;
-  const to=el('s-to').value? el('s-to').value+'T23:59:59Z' : null;
-  let q=sb.from('requests').select('amount').eq('status','Paid');
-  if(from) q=q.gte('created_at',from);
-  if(to) q=q.lte('created_at',to);
-  const { data, error } = await q;
-  if(error){ UI.paidTotal.textContent='Error'; return; }
-  const sum=(data||[]).reduce((acc,r)=> acc + Number(r.amount||0), 0);
-  UI.paidTotal.textContent = `GBP ${sum.toFixed(2)}`;
-}
-el('btn-calc').onclick=()=> calcPaid();
-el('btn-all').onclick=()=>{ el('s-from').value=''; el('s-to').value=''; calcPaid(); };
 </script>
 </body>
 </html>
