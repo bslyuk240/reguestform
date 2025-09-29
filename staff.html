@@ -7,6 +7,7 @@
 <link rel="icon" href="logo.png">
 <style>
   :root{--jm-primary:#08A045;--jm-border:#E7EAEE;}
+  *{box-sizing:border-box}
   body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
   header{background:#0E141B;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
   .brand{display:flex;gap:8px;align-items:center}
@@ -25,16 +26,21 @@
   .Approved{background:#d1e7dd;border:1px solid #a3cfbb}
   .Declined{background:#f8d7da;border:1px solid #f1aeb5}
   .Paid{background:#cff4fc;border:1px solid #9eeaf9}
+  .hidden{display:none !important}
+
+  /* one-line, compact filters; scroll horizontally on small screens */
   .filters{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto}
   .filters select,.filters input{height:32px}
+  .filters input[type="date"]{width:130px}
+  .filters input[type="search"]{width:220px}
 </style>
 </head>
 <body>
 <header>
-  <div class="brand"><img src="logo.png"><b>JulineMart • Staff</b></div>
+  <div class="brand"><img src="logo.png" alt=""><b>JulineMart • Staff</b></div>
   <div>
     <span id="whoami"></span>
-    <button id="btn-signout" class="btn hidden">Sign out</button>
+    <button id="btn-signout" class="btn hidden" type="button">Sign out</button>
   </div>
 </header>
 
@@ -43,12 +49,12 @@
   <section id="signin-card" class="card">
     <h3>Staff Access</h3>
     <div class="row">
-      <div><label>Email</label><input id="email" type="email"></div>
-      <div><label>Password</label><input id="password" type="password"></div>
+      <div><label>Email</label><input id="email" type="email" autocomplete="username"></div>
+      <div><label>Password</label><input id="password" type="password" autocomplete="current-password"></div>
     </div>
     <div class="row" style="margin-top:8px">
-      <button id="btn-login" class="btn primary">Log in</button>
-      <button id="btn-register" class="btn">Register</button>
+      <button id="btn-login" class="btn primary" type="button">Log in</button>
+      <button id="btn-register" class="btn" type="button">Register</button>
       <a href="admin.html" class="btn">Go to Admin</a>
     </div>
     <p id="signin-msg" style="color:#c00"></p>
@@ -58,14 +64,16 @@
   <section id="page-new" class="card hidden">
     <h3>New Request</h3>
     <div class="row">
-      <div><label>Type</label><select id="kind"><option value="petty_cash">Petty Cash (advance)</option><option value="reimbursement">Reimbursement</option></select></div>
+      <div><label>Type</label>
+        <select id="kind"><option value="petty_cash">Petty Cash (advance)</option><option value="reimbursement">Reimbursement</option></select>
+      </div>
       <div><label>Amount</label><input id="amount" type="number" min="0" step="0.01"></div>
       <div><label>Currency</label><select id="currency"><option>GBP</option><option>NGN</option><option>USD</option></select></div>
       <div><label>Needed by (optional)</label><input id="needed" type="date"></div>
     </div>
-    <div><label>Description / Purpose</label><textarea id="description"></textarea></div>
+    <div><label>Description / Purpose</label><textarea id="description" placeholder="What is this for?"></textarea></div>
     <div><label>Receipts</label><input id="receipts" type="file" multiple accept=".png,.jpg,.jpeg,.pdf"></div>
-    <button id="btn-submit" class="btn primary" style="margin-top:10px">Submit</button>
+    <button id="btn-submit" class="btn primary" style="margin-top:10px" type="button">Submit</button>
   </section>
 
   <!-- My requests -->
@@ -75,7 +83,8 @@
       <select id="f-status"><option value="">Status: All</option><option>Pending</option><option>Approved</option><option>Declined</option><option>Paid</option></select>
       <input id="f-from" type="date"><input id="f-to" type="date">
       <input id="f-desc" type="search" placeholder="Search description">
-      <button id="btn-apply" class="btn">Apply</button><button id="btn-clear" class="btn">Clear</button>
+      <button id="btn-apply" class="btn" type="button">Apply</button>
+      <button id="btn-clear" class="btn" type="button">Clear</button>
     </div>
     <table id="mine-table">
       <thead><tr><th>Date</th><th>Status</th><th>Amount</th><th>Comment</th></tr></thead>
@@ -86,17 +95,103 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
-const sb=supabase.createClient(
- "https://hmguraxzebhspednbbav.supabase.co",
- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o"
+/* Supabase client */
+const sb = supabase.createClient(
+  "https://hmguraxzebhspednbbav.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o"
 );
-const el=id=>document.getElementById(id);
-const UI={signin:el('signin-card'),msg:el('signin-msg'),who:el('whoami'),btnOut:el('btn-signout'),
-          new:el('page-new'),mine:el('page-mine'),tbody:document.querySelector('#mine-table tbody')};
-let user=null;
 
+const $ = id => document.getElementById(id);
+const UI = {
+  signin: $('signin-card'),
+  who: $('whoami'),
+  signout: $('btn-signout'),
+  pageNew: $('page-new'),
+  pageMine: $('page-mine'),
+  tbody: document.querySelector('#mine-table tbody'),
+  msg: $('signin-msg'),
+};
+let currentUser = null;
+
+/* ---------- UI toggle (robust) ---------- */
+function setLoggedInUI(isIn){
+  UI.signin.classList.toggle('hidden', isIn);
+  UI.pageNew.classList.toggle('hidden', !isIn);
+  UI.pageMine.classList.toggle('hidden', !isIn);
+  UI.signout.classList.toggle('hidden', !isIn);
+}
+
+/* ---------- Session/init ---------- */
+async function readSessionAndRender(){
+  const { data:{ session } } = await sb.auth.getSession();
+  currentUser = session?.user ?? null;
+  if(currentUser){
+    UI.who.textContent = currentUser.email || '';
+    setLoggedInUI(true);
+    loadMine();
+    subscribeRealtime();
+  }else{
+    UI.who.textContent = '';
+    setLoggedInUI(false);
+  }
+}
+sb.auth.onAuthStateChange(readSessionAndRender);
+readSessionAndRender();
+
+/* ---------- Auth actions ---------- */
+$('btn-login').onclick = async ()=>{
+  UI.msg.textContent = '';
+  const email = $('email').value.trim();
+  const password = $('password').value.trim();
+  if(!email || !password){ UI.msg.textContent='Enter email & password.'; return; }
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){ UI.msg.textContent = error.message; return; }
+  // Immediately flip UI in case onAuth event is delayed on some browsers
+  setLoggedInUI(true);
+  readSessionAndRender();
+};
+
+$('btn-register').onclick = async ()=>{
+  UI.msg.textContent='';
+  const email = $('email').value.trim();
+  const password = $('password').value.trim();
+  if(!email || !password){ UI.msg.textContent='Enter email & password.'; return; }
+  const { data, error } = await sb.auth.signUp({ email, password });
+  if(error){ UI.msg.textContent = error.message; return; }
+  if(data?.session){
+    setLoggedInUI(true);
+    readSessionAndRender();
+  }else{
+    UI.msg.textContent = 'Registered! Please log in.';
+  }
+};
+
+UI.signout.onclick = async ()=>{ await sb.auth.signOut(); setLoggedInUI(false); location.reload(); };
+
+/* ---------- Submit request ---------- */
+$('btn-submit').onclick = async ()=>{
+  if(!currentUser){ UI.msg.textContent='Please log in.'; return; }
+  const kind=$('kind').value, amount=Number($('amount').value), currency=$('currency').value,
+        needed=$('needed').value||null, desc=$('description').value.trim();
+  if(!(amount>0) || !desc){ alert('Enter amount and description.'); return; }
+  const { data:req, error } = await sb.from('requests')
+    .insert({ user_id: currentUser.id, kind, amount, currency, needed_by: needed, description: desc })
+    .select().single();
+  if(error){ alert(error.message); return; }
+
+  // upload receipts (optional)
+  for(const f of $('receipts').files){
+    const path = `${currentUser.id}/${Date.now()}-${f.name}`;
+    await sb.storage.from('receipts').upload(path, f);
+    await sb.from('request_notes').insert({ request_id: req.id, author_id: currentUser.id, note: 'receipt:'+path });
+  }
+  $('amount').value=''; $('description').value=''; $('receipts').value='';
+  loadMine();
+};
+
+/* ---------- Staff list (with admin reason only) ---------- */
 function pill(s){return `<span class="pill ${s}">${s}</span>`;}
-function fmt(a,c){return `${c} ${Number(a).toFixed(2)}`;}
+function fmt(a,c){return `${c} ${Number(a||0).toFixed(2)}`;}
 
 async function latestAdminComment(requestId){
   const { data } = await sb.from('request_notes')
@@ -108,14 +203,16 @@ async function latestAdminComment(requestId){
 }
 
 async function loadMine(filters={}){
-  let q=sb.from('requests').select('*').eq('user_id',user.id).order('created_at',{ascending:false});
+  if(!currentUser) return;
+  let q=sb.from('requests').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
   if(filters.status) q=q.eq('status',filters.status);
   if(filters.from) q=q.gte('created_at',filters.from+'T00:00:00Z');
   if(filters.to) q=q.lte('created_at',filters.to+'T23:59:59Z');
   if(filters.desc) q=q.ilike('description','%'+filters.desc+'%');
-  const { data } = await q;
+  const { data, error } = await q;
+  if(error){ UI.tbody.innerHTML=`<tr><td colspan="4">${error.message}</td></tr>`; return; }
   UI.tbody.innerHTML='';
-  for(const r of data||[]){
+  for(const r of (data||[])){
     const comment = await latestAdminComment(r.id);
     UI.tbody.insertAdjacentHTML('beforeend',`
       <tr>
@@ -127,36 +224,24 @@ async function loadMine(filters={}){
   }
 }
 
-async function init(){
-  const { data:{session} }=await sb.auth.getSession();
-  user=session?.user||null;
-  if(user){
-    UI.who.textContent=user.email; UI.btnOut.classList.remove('hidden');
-    UI.signin.classList.add('hidden'); UI.new.classList.remove('hidden'); UI.mine.classList.remove('hidden');
-    loadMine();
-  }else{
-    UI.who.textContent=''; UI.btnOut.classList.add('hidden');
-    UI.signin.classList.remove('hidden'); UI.new.classList.add('hidden'); UI.mine.classList.add('hidden');
-  }
+/* filters */
+$('btn-apply').onclick = ()=> loadMine({
+  status:$('f-status').value||null,
+  from:$('f-from').value||null,
+  to:$('f-to').value||null,
+  desc:$('f-desc').value.trim()||null
+});
+$('btn-clear').onclick = ()=>{ $('f-status').value=''; $('f-from').value=''; $('f-to').value=''; $('f-desc').value=''; loadMine(); };
+
+/* realtime refresh for this user */
+let rt=null;
+function subscribeRealtime(){
+  if(rt) sb.removeChannel(rt);
+  rt = sb.channel('mine-'+currentUser.id)
+    .on('postgres_changes',{event:'*',schema:'public',table:'requests',filter:`user_id=eq.${currentUser.id}`}, ()=>loadMine())
+    .on('postgres_changes',{event:'*',schema:'public',table:'request_notes'}, ()=>loadMine())
+    .subscribe();
 }
-sb.auth.onAuthStateChange(init); init();
-
-el('btn-login').onclick=async()=>{const {error}=await sb.auth.signInWithPassword({email:el('email').value.trim(),password:el('password').value.trim()}); if(error)UI.msg.textContent=error.message;};
-el('btn-register').onclick=async()=>{const {error,data}=await sb.auth.signUp({email:el('email').value.trim(),password:el('password').value.trim()}); if(error)UI.msg.textContent=error.message; if(data?.user)UI.msg.textContent="Registered, now log in."};
-el('btn-signout').onclick=()=>sb.auth.signOut().then(()=>location.reload());
-
-el('btn-submit').onclick=async()=>{
-  const kind=el('kind').value, amount=Number(el('amount').value), currency=el('currency').value, needed=el('needed').value, desc=el('description').value.trim();
-  const { data, error } = await sb.from('requests').insert({user_id:user.id,kind,amount,currency,needed_by:needed||null,description:desc,status:'Pending'}).select().single();
-  if(error) return alert(error.message);
-  const files=el('receipts').files;
-  if(files.length){ for(const f of files){const path=`${user.id}/${Date.now()}-${f.name}`;await sb.storage.from('receipts').upload(path,f);await sb.from('request_notes').insert({request_id:data.id,author_id:user.id,note:'receipt:'+path}); } }
-  el('amount').value=''; el('description').value=''; el('receipts').value='';
-  loadMine();
-};
-
-el('btn-apply').onclick=()=>loadMine({status:el('f-status').value||null,from:el('f-from').value||null,to:el('f-to').value||null,desc:el('f-desc').value.trim()||null});
-el('btn-clear').onclick=()=>{el('f-status').value='';el('f-from').value='';el('f-to').value='';el('f-desc').value='';loadMine();};
 </script>
 </body>
 </html>
