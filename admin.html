@@ -6,7 +6,7 @@
 <title>JulineMart • Admin</title>
 <link rel="icon" href="logo.png">
 <style>
-  :root{--jm-primary:#08A045; --jm-dark:#0E141B; --jm-bg:#F6F8FA; --jm-border:#E7EAEE;}
+  :root{--jm-primary:#08A045;--jm-dark:#0E141B;--jm-bg:#F6F8FA;--jm-border:#E7EAEE;}
   *{box-sizing:border-box}
   body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--jm-bg);color:#1f2937}
   header{background:var(--jm-dark);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
@@ -47,27 +47,24 @@
 </header>
 
 <main>
-  <!-- Admin login (does NOT redirect away) -->
+  <!-- Admin login -->
   <section id="auth" class="card hidden">
     <h3>Admin sign-in</h3>
     <div class="row">
-      <div><label>Email</label><input id="email" type="email" placeholder="you@julinemart.com" autocomplete="username"></div>
-      <div><label>Password</label><input id="password" type="password" placeholder="Password" autocomplete="current-password"></div>
+      <div><label>Email</label><input id="email" type="email" placeholder="you@julinemart.com"></div>
+      <div><label>Password</label><input id="password" type="password" placeholder="Password"></div>
     </div>
     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
       <button id="btn-login" class="btn primary" type="button">Log in</button>
-      <a href="staff.html" class="btn" style="text-decoration:none;display:inline-block">Go to Staff</a>
+      <a href="staff.html" class="btn" style="text-decoration:none">Go to Staff</a>
     </div>
     <p id="auth-msg" class="foot"></p>
   </section>
 
-  <!-- Not admin message -->
+  <!-- Not admin -->
   <section id="no-admin" class="card hidden">
     <h3>Access denied</h3>
     <p>Your account is <b>not an admin</b>. Ask the owner to promote your role in <code>profiles</code>.</p>
-    <p class="foot">Tip: in Supabase SQL editor, run:<br>
-      <code>update profiles set role='admin' where user_id = (select id from auth.users where email='YOUR_EMAIL');</code>
-    </p>
     <p><a class="btn" href="staff.html" style="text-decoration:none">Go to Staff</a></p>
   </section>
 
@@ -89,7 +86,7 @@
     </div>
 
     <div class="card">
-      <table id="tbl">
+      <table id="admin-table">
         <thead><tr><th>Date</th><th>Staff</th><th>Type</th><th>Amount</th><th>Status</th><th>Actions</th><th>Receipt</th></tr></thead>
         <tbody></tbody>
       </table>
@@ -104,159 +101,100 @@ const sb = supabase.createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o"
 );
 
-const el = id => document.getElementById(id);
-const S = {
-  who: el('whoami'),
-  btnOut: el('btn-signout'),
-  auth: el('auth'),
-  authMsg: el('auth-msg'),
-  loginBtn: el('btn-login'),
-  noAdmin: el('no-admin'),
-  admin: el('admin'),
-  tbody: document.querySelector('#tbl tbody')
-};
+const el=id=>document.getElementById(id);
+const S={who:el('whoami'),btnOut:el('btn-signout'),auth:el('auth'),authMsg:el('auth-msg'),
+         loginBtn:el('btn-login'),noAdmin:el('no-admin'),admin:el('admin'),
+         tbody:document.querySelector('#admin-table tbody')};
+let user=null;
+let LOAD_SEQ=0;   // request guard
+let INITIALIZED=false;
 
-let user = null;
-function show(section){
-  [S.auth,S.noAdmin,S.admin].forEach(x=>x.classList.add('hidden'));
-  section.classList.remove('hidden');
-}
-function setBusy(btn,txt){ if(!btn) return; btn.dataset.prev=btn.textContent; btn.textContent=txt; btn.disabled=true; }
-function clearBusy(btn){ if(!btn) return; btn.textContent=btn.dataset.prev||btn.textContent; btn.disabled=false; }
+function show(sec){[S.auth,S.noAdmin,S.admin].forEach(x=>x.classList.add('hidden'));sec.classList.remove('hidden');}
+function setBusy(b,t){if(!b)return;b.dataset.prev=b.textContent;b.textContent=t;b.disabled=true;}
+function clearBusy(b){if(!b)return;b.textContent=b.dataset.prev||b.textContent;b.disabled=false;}
 
 async function init(){
-  const { data:{ session }, error } = await sb.auth.getSession();
-  if(error) console.warn('getSession error:', error);
-  user = session?.user ?? null;
-  console.log('INIT session:', session);
-
-  if(!user){
-    S.who.textContent = '';
-    S.btnOut.classList.add('hidden');
-    show(S.auth);
-    return;
-  }
-
-  S.who.textContent = user.email;
-  S.btnOut.classList.remove('hidden');
-
-  // Check role from profiles
-  const prof = await sb.from('profiles').select('role').eq('user_id', user.id).maybeSingle();
-  console.log('Profile lookup:', prof);
-  const role = prof.data?.role;
-  if(!role){ show(S.noAdmin); return; }
-  if(role !== 'admin'){ show(S.noAdmin); return; }
-
-  // Show admin dashboard
-  show(S.admin);
-  load();
+  const {data:{session},error}=await sb.auth.getSession();
+  if(error)console.warn(error);
+  user=session?.user??null;
+  if(!user){S.who.textContent='';S.btnOut.classList.add('hidden');show(S.auth);return;}
+  S.who.textContent=user.email;S.btnOut.classList.remove('hidden');
+  const prof=await sb.from('profiles').select('role').eq('user_id',user.id).maybeSingle();
+  const role=prof.data?.role;
+  if(role!=='admin'){show(S.noAdmin);return;}
+  show(S.admin);loadAdmin();
 }
+function initOnce(){if(INITIALIZED)return;INITIALIZED=true;init();}
+sb.auth.onAuthStateChange(()=>initOnce());initOnce();
+S.btnOut.onclick=async()=>{await sb.auth.signOut();location.reload();};
+S.loginBtn.onclick=async(e)=>{e.preventDefault();const email=el('email').value.trim(),pw=el('password').value.trim();
+ if(!email||!pw){S.authMsg.textContent='Enter email & password.';return;}
+ setBusy(S.loginBtn,'Logging in…');try{const {error}=await sb.auth.signInWithPassword({email,password:pw});
+ if(error)throw error;location.reload();}catch(err){S.authMsg.textContent=err.message||String(err);}finally{clearBusy(S.loginBtn);}};
 
-sb.auth.onAuthStateChange((evt, session)=>{ console.log('AUTH EVENT:', evt, session); init(); });
+function pill(s){return `<span class="pill ${s}">${s}</span>`;}
+function fmt(a,c){return `${c} ${Number(a).toFixed(2)}`;}
+async function signedUrl(path){if(!path)return'';const {data}=await sb.storage.from('receipts').createSignedUrl(path,600);return data?.signedUrl||'';}
 
-S.btnOut.onclick = async ()=>{ await sb.auth.signOut(); location.reload(); };
+async function fetchRequests(filters={}){let q=sb.from('requests').select('*, profiles:user_id(full_name,user_id)').order('created_at',{ascending:false});
+ if(filters.status)q=q.eq('status',filters.status);if(filters.kind)q=q.eq('kind',filters.kind);
+ if(filters.from)q=q.gte('created_at',filters.from+'T00:00:00Z');if(filters.to)q=q.lte('created_at',filters.to+'T23:59:59Z');
+ const {data,error}=await q;if(error)throw error;return data;}
 
-S.loginBtn.onclick = async (e)=>{
-  e.preventDefault();
-  const email = el('email').value.trim();
-  const password = el('password').value.trim();
-  if(!email || !password){ S.authMsg.textContent = 'Enter email & password.'; return; }
-  setBusy(S.loginBtn, 'Logging in…');
+async function loadAdmin(filters={}) {
+  const seq=++LOAD_SEQ;S.tbody.innerHTML='<tr><td colspan="7">Loading…</td></tr>';
   try{
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    console.log('Login result:', { data, error });
-    if(error) throw error;
-    location.reload();
-  }catch(err){ S.authMsg.textContent = err.message || String(err); }
-  finally{ clearBusy(S.loginBtn); }
-};
-
-function pill(s){ return `<span class="pill ${s}">${s}</span>`; }
-function fmt(a,c){ return `${c} ${Number(a).toFixed(2)}`; }
-
-async function signedUrl(path){
-  if(!path) return '';
-  const { data, error } = await sb.storage.from('receipts').createSignedUrl(path, 600);
-  return error ? '' : data.signedUrl;
-}
-
-async function fetchRequests(filters={}){
-  let q = sb.from('requests').select('*, profiles:user_id(full_name,user_id)').order('created_at',{ascending:false});
-  if(filters.status) q = q.eq('status', filters.status);
-  if(filters.kind)   q = q.eq('kind', filters.kind);
-  if(filters.from)   q = q.gte('created_at', filters.from + 'T00:00:00Z');
-  if(filters.to)     q = q.lte('created_at', filters.to + 'T23:59:59Z');
-  return await q;
-}
-
-async function load(filters={}){
-  S.tbody.innerHTML = '<tr><td colspan="7">Loading…</td></tr>';
-  const { data, error } = await fetchRequests(filters);
-  if(error){ S.tbody.innerHTML = `<tr><td colspan="7">${error.message}</td></tr>`; return; }
-  S.tbody.innerHTML = '';
-  for(const r of data){
-    const name = r.profiles?.full_name || (r.user_id || '').slice(0,8);
-    const notes = await sb.from('request_notes').select('*').eq('request_id', r.id);
-    const rec = (notes.data||[]).find(n=>n.note.startsWith('receipt:'));
-    let link=''; if(rec){ const url = await signedUrl(rec.note.replace('receipt:','')); if(url) link=`<a href="${url}" target="_blank" rel="noopener">View</a>`; }
-    S.tbody.insertAdjacentHTML('beforeend',
-      `<tr>
-        <td>${new Date(r.created_at).toLocaleDateString()}</td>
-        <td>${name}</td>
-        <td>${r.kind.replace('_',' ')}</td>
-        <td>${fmt(r.amount,r.currency)}</td>
-        <td>${pill(r.status)}</td>
-        <td>
-          <button class="btn" data-act="approve" data-id="${r.id}">Approve</button>
-          <button class="btn" data-act="decline" data-id="${r.id}">Decline</button>
-          <button class="btn" data-act="pay" data-id="${r.id}">Mark Paid</button>
-        </td>
-        <td>${link}</td>
-      </tr>`);
-  }
-  document.querySelectorAll('[data-act]').forEach(b=>b.onclick=onAction);
+    const data=await fetchRequests(filters);
+    if(seq!==LOAD_SEQ)return; // stale
+    S.tbody.innerHTML='';
+    for(const r of data){
+      const name=r.profiles?.full_name||(r.user_id||'').slice(0,8);
+      const {data:notes}=await sb.from('request_notes').select('*').eq('request_id',r.id);
+      const rec=(notes||[]).find(n=>n.note.startsWith('receipt:'));
+      let link='';if(rec){const url=await signedUrl(rec.note.replace('receipt:',''));if(url)link=`<a href="${url}" target="_blank">View</a>`;}
+      S.tbody.insertAdjacentHTML('beforeend',
+        `<tr>
+          <td>${new Date(r.created_at).toLocaleDateString()}</td>
+          <td>${name}</td>
+          <td>${r.kind.replace('_',' ')}</td>
+          <td>${fmt(r.amount,r.currency)}</td>
+          <td>${pill(r.status)}</td>
+          <td>
+            <button class="btn" data-act="approve" data-id="${r.id}">Approve</button>
+            <button class="btn" data-act="decline" data-id="${r.id}">Decline</button>
+            <button class="btn" data-act="pay" data-id="${r.id}">Mark Paid</button>
+          </td>
+          <td>${link}</td>
+        </tr>`);
+    }
+    document.querySelectorAll('[data-act]').forEach(b=>b.onclick=onAction);
+  }catch(err){if(seq!==LOAD_SEQ)return;S.tbody.innerHTML=`<tr><td colspan="7">${err.message}</td></tr>`;}
 }
 
 async function onAction(e){
-  const id = e.target.dataset.id;
-  const act = e.target.dataset.act;
+  const id=e.target.dataset.id,act=e.target.dataset.act;
   try{
-    if(act==='approve'||act==='decline'){
-      const status = act==='approve' ? 'Approved' : 'Declined';
-      const up = await sb.from('requests').update({ status }).eq('id', id);
-      if(up.error) throw up.error;
-      await sb.from('request_notes').insert({ request_id:id, author_id:user.id, note:`Status -> ${status}` });
-    }else if(act==='pay'){
-      const method = prompt('Payment method (e.g., Transfer, Cash):','Transfer'); if(method===null) return;
-      const reference = prompt('Reference / Txn ID:','');
-      const ins = await sb.from('payouts').insert({ request_id:id, paid_by:user.id, method, reference });
-      if(ins.error) throw ins.error;
-      const up = await sb.from('requests').update({ status:'Paid' }).eq('id', id);
-      if(up.error) throw up.error;
-      await sb.from('request_notes').insert({ request_id:id, author_id:user.id, note:`Status -> Paid (${method} ${reference||''})` });
-    }
-    load();
-  }catch(err){ alert(err.message || String(err)); }
+    if(act==='approve'||act==='decline'){const status=act==='approve'?'Approved':'Declined';
+      await sb.from('requests').update({status}).eq('id',id);
+      await sb.from('request_notes').insert({request_id:id,author_id:user.id,note:`Status -> ${status}`});
+    }else if(act==='pay'){const method=prompt('Payment method:','Transfer');if(method===null)return;
+      const ref=prompt('Reference / Txn ID:','');
+      await sb.from('payouts').insert({request_id:id,paid_by:user.id,method,reference:ref});
+      await sb.from('requests').update({status:'Paid'}).eq('id',id);
+      await sb.from('request_notes').insert({request_id:id,author_id:user.id,note:`Status -> Paid (${method} ${ref||''})`});}
+    loadAdmin();
+  }catch(err){alert(err.message||String(err));}
 }
 
-el('btn-filter').onclick = ()=> load({
-  status: el('f-status').value || null,
-  kind:   el('f-kind').value   || null,
-  from:   el('f-from').value   || null,
-  to:     el('f-to').value     || null
-});
-el('btn-clear').onclick = ()=>{ el('f-status').value=''; el('f-kind').value=''; el('f-from').value=''; el('f-to').value=''; load(); };
-el('btn-export').onclick = async ()=>{
-  const { data, error } = await sb.from('requests').select('*').order('created_at',{ascending:false});
-  if(error){ alert(error.message); return; }
-  const rows=[['created_at','user_id','kind','amount','currency','needed_by','status','updated_at','id']];
-  data.forEach(r=>rows.push([r.created_at,r.user_id,r.kind,r.amount,r.currency,r.needed_by||'',r.status,r.updated_at,r.id]));
-  const csv = rows.map(r=>r.map(x=>`"${String(x).replaceAll('"','""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='julinemart_requests.csv'; a.click(); URL.revokeObjectURL(url);
-};
-
-init();
+el('btn-filter').onclick=()=>loadAdmin({status:el('f-status').value||null,kind:el('f-kind').value||null,
+ from:el('f-from').value||null,to:el('f-to').value||null});
+el('btn-clear').onclick=()=>{el('f-status').value='';el('f-kind').value='';el('f-from').value='';el('f-to').value='';loadAdmin();};
+el('btn-export').onclick=async()=>{const {data,error}=await sb.from('requests').select('*').order('created_at',{ascending:false});
+ if(error){alert(error.message);return;}const rows=[['created_at','user_id','kind','amount','currency','needed_by','status','updated_at','id']];
+ data.forEach(r=>rows.push([r.created_at,r.user_id,r.kind,r.amount,r.currency,r.needed_by||'',r.status,r.updated_at,r.id]));
+ const csv=rows.map(r=>r.map(x=>`"${String(x).replaceAll('"','""')}"`).join(',')).join('\n');
+ const blob=new Blob([csv],{type:'text/csv'});const url=URL.createObjectURL(blob);const a=document.createElement('a');
+ a.href=url;a.download='julinemart_requests.csv';a.click();URL.revokeObjectURL(url);};
 </script>
 </body>
 </html>
