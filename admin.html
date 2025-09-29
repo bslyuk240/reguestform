@@ -6,13 +6,12 @@
 <title>JulineMart • Admin</title>
 <link rel="icon" href="logo.png">
 <style>
-  :root{--jm-primary:#08A045;--jm-dark:#0E141B;--jm-bg:#F6F8FA;--jm-border:#E7EAEE;}
+  :root{--jm-primary:#08A045;--jm-dark:#0E141B;--jm-border:#E7EAEE;}
   *{box-sizing:border-box}
-  body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:#fff;color:#111}
+  body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
   header{background:#0E141B;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
   .brand{display:flex;gap:10px;align-items:center}
-  .brand img{width:28px;height:28px;border-radius:6px;object-fit:cover}
-  .brand b{font-size:16px}
+  .brand img{width:28px;height:28px;border-radius:6px}
   .btn{cursor:pointer;padding:8px 10px;border-radius:8px;border:1px solid var(--jm-border);background:#fff}
   .btn.primary{background:var(--jm-primary);color:#fff;border-color:transparent}
   .btn[disabled]{opacity:.6;cursor:not-allowed}
@@ -28,20 +27,15 @@
   .Approved{background:#d1e7dd;border:1px solid #a3cfbb}
   .Declined{background:#f8d7da;border:1px solid #f1aeb5}
   .Paid{background:#cff4fc;border:1px solid #9eeaf9}
-  .hidden{display:none !important} /* <- unbreakable */
-  .foot{font-size:12px;color:#6b7280}
-  td.desc {max-width:360px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  #paid-totals { font-size:14px; background:#f6f8fa; border:1px solid #e7eaee; padding:6px 10px; border-radius:8px; }
+  .hidden{display:none !important}
+  #paid-totals{font-size:14px;background:#f6f8fa;border:1px solid #e7eaee;padding:6px 10px;border-radius:8px}
 </style>
 </head>
 <body>
 <header>
   <div class="brand">
     <img src="logo.png" alt="">
-    <div>
-      <b>JulineMart • Admin</b>
-      <div class="foot">Petty Cash & Reimbursements</div>
-    </div>
+    <b>JulineMart • Admin</b>
   </div>
   <div>
     <span id="whoami"></span>
@@ -50,7 +44,7 @@
 </header>
 
 <main>
-  <!-- Admin login -->
+  <!-- Login -->
   <section id="auth" class="card">
     <h3>Admin sign-in</h3>
     <div class="row">
@@ -61,10 +55,10 @@
       <button id="btn-login" class="btn primary" type="button">Log in</button>
       <a href="staff.html" class="btn" style="text-decoration:none">Go to Staff</a>
     </div>
-    <p id="auth-msg" class="foot"></p>
+    <p id="auth-msg" style="color:#c00"></p>
   </section>
 
-  <!-- Header with filters + totals + export (default hidden) -->
+  <!-- Filters + totals -->
   <section id="admin-top" class="card hidden" style="display:flex;justify-content:space-between;align-items:center">
     <div>
       <h3 style="margin:0">All Requests</h3>
@@ -83,114 +77,107 @@
     </div>
   </section>
 
-  <!-- Admin table (default hidden) -->
+  <!-- Table -->
   <section id="admin-table-wrap" class="card hidden">
     <table id="admin-table">
-      <thead>
-        <tr>
-          <th>Date</th><th>Staff</th><th>Type</th><th>Description</th><th>Amount</th><th>Status</th><th>Action</th><th>Receipt</th>
-        </tr>
-      </thead>
+      <thead><tr><th>Date</th><th>Staff</th><th>Type</th><th>Description</th><th>Amount</th><th>Status</th><th>Action</th><th>Receipt</th></tr></thead>
       <tbody></tbody>
     </table>
   </section>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="totals.js"></script>
 <script>
+/* ========= Inline totals helper (so it never crashes) ========= */
+function jmSummarizePaidTotals(rows){
+  const totals={};
+  for(const r of rows||[]){ const cur=(String(r?.currency??'').trim()||'UNK'); const amt=Number(r?.amount??0)||0; totals[cur]=(totals[cur]||0)+amt; }
+  return totals;
+}
+function jmFormatTotalsLabel(totals){
+  const entries=Object.entries(totals||{});
+  if(!entries.length) return 'Totals: 0';
+  return 'Totals: ' + entries.map(([c,s])=>`${c} ${s.toFixed(2)}`).join(' • ');
+}
+/* ============================================================= */
+
 const sb = supabase.createClient(
   "https://hmguraxzebhspednbbav.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o"
 );
 
-const { summarizePaidTotals, formatPaidTotalsLabel } = window.JMTotals;
-
 const el=id=>document.getElementById(id);
 const UI={
-  who:el('whoami'), btnOut:el('btn-signout'),
-  auth:el('auth'), authMsg:el('auth-msg'), loginBtn:el('btn-login'),
-  top:el('admin-top'), tableWrap:el('admin-table-wrap'),
-  tbody:document.querySelector('#admin-table tbody'),
+  who:el('whoami'), out:el('btn-signout'),
+  auth:el('auth'), msg:el('auth-msg'), login:el('btn-login'),
+  top:el('admin-top'), wrap:el('admin-table-wrap'), tbody:document.querySelector('#admin-table tbody'),
   totals:el('paid-totals')
 };
+let me=null;
 
-let user=null;
-
-/* Hard hide admin sections immediately on load (belt & braces) */
-(function ensureHidden(){
-  UI.top.classList.add('hidden');
-  UI.tableWrap.classList.add('hidden');
-  UI.btnOut.classList.add('hidden');
-})();
+/* start fully hidden */
+UI.top.classList.add('hidden'); UI.wrap.classList.add('hidden'); UI.out.classList.add('hidden');
 
 function showAdminUI(show){
   UI.auth.classList.toggle('hidden', show);
   UI.top.classList.toggle('hidden', !show);
-  UI.tableWrap.classList.toggle('hidden', !show);
-  UI.btnOut.classList.toggle('hidden', !show);
+  UI.wrap.classList.toggle('hidden', !show);
+  UI.out.classList.toggle('hidden', !show);
 }
 
-/* ===== Init & auth ===== */
+/* ---- init/auth ---- */
 async function init(){
-  const {data:{session}}=await sb.auth.getSession();
-  user=session?.user??null;
+  const { data:{session} } = await sb.auth.getSession();
+  me=session?.user||null;
 
-  if(!user){
-    UI.who.textContent='';
-    showAdminUI(false);
-    return;
-  }
+  if(!me){ UI.who.textContent=''; showAdminUI(false); return; }
 
-  UI.who.textContent = user.email;
+  UI.who.textContent=me.email;
 
-  // must be admin
-  const { data:prof } = await sb.from('profiles').select('role').eq('user_id',user.id).maybeSingle();
+  const { data:prof } = await sb.from('profiles').select('role').eq('user_id',me.id).maybeSingle();
   if((prof?.role||'staff')!=='admin'){
-    UI.authMsg.textContent='Access denied (not admin).';
+    UI.msg.textContent='Access denied (not admin).';
     showAdminUI(false);
-    await sb.auth.signOut(); // ensure no leftover session
+    await sb.auth.signOut();
     return;
   }
-
   showAdminUI(true);
-  await load(); calcPaidTotals();
+  await load(); calcTotals();
 }
-sb.auth.onAuthStateChange((_evt,_sess)=>init());
+sb.auth.onAuthStateChange(init);  // attach before anything else
 init();
 
-/* login / logout */
-UI.loginBtn.onclick=async(e)=>{
-  e.preventDefault();
-  const email=el('email').value.trim(), pw=el('password').value.trim();
-  if(!email||!pw){ UI.authMsg.textContent='Enter email & password.'; return; }
-  const {error}=await sb.auth.signInWithPassword({email,password:pw});
-  if(error){ UI.authMsg.textContent=error.message; return; }
-  UI.authMsg.textContent=''; // success will trigger onAuthStateChange → init()
+/* ---- login / logout ---- */
+UI.login.onclick = async ()=>{
+  UI.msg.textContent='';
+  const email=el('email').value.trim();
+  const pw=el('password').value.trim();
+  if(!email||!pw){ UI.msg.textContent='Enter email & password.'; return; }
+  const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+  if(error){ UI.msg.textContent=error.message; return; }
+  // onAuthStateChange will flip the UI
 };
 
-UI.btnOut.onclick=async()=>{
+UI.out.onclick = async ()=>{
   await sb.auth.signOut();
   showAdminUI(false);
   location.href='staff.html';
 };
 
-/* ===== Helpers ===== */
+/* ---- helpers ---- */
 function pill(s){return `<span class="pill ${s}">${s}</span>`;}
 function fmt(a,c){return `${c} ${Number(a||0).toFixed(2)}`;}
-async function signedUrl(path){ if(!path) return ''; const {data}=await sb.storage.from('receipts').createSignedUrl(path, 600); return data?.signedUrl||''; }
-
-/* Staff name lookup (no joins; cached) */
+async function signedUrl(path){ if(!path) return ''; const {data}=await sb.storage.from('receipts').createSignedUrl(path,600); return data?.signedUrl||''; }
 const nameCache=new Map();
 async function nameFor(user_id){
   if(nameCache.has(user_id)) return nameCache.get(user_id);
   const { data } = await sb.from('profiles').select('full_name,email').eq('user_id',user_id).maybeSingle();
-  const name = (data?.full_name && data.full_name.trim()) || data?.email || (user_id||'').slice(0,8);
-  nameCache.set(user_id, name);
+  const name=(data?.full_name&&data.full_name.trim())||data?.email||(user_id||'').slice(0,8);
+  nameCache.set(user_id,name);
   return name;
 }
 
-/* ===== Data ===== */
+/* ---- data ---- */
 function readFilters(){ return {
   status: el('f-status').value || null,
   kind:   el('f-kind').value   || null,
@@ -198,106 +185,94 @@ function readFilters(){ return {
   to:     el('f-to').value     || null
 };}
 
-async function fetchRequests(filters={}){
+async function fetchRequests(f={}){
   let q=sb.from('requests').select('*').order('created_at',{ascending:false});
-  if(filters.status) q=q.eq('status',filters.status);
-  if(filters.kind) q=q.eq('kind',filters.kind);
-  if(filters.from) q=q.gte('created_at',filters.from+'T00:00:00Z');
-  if(filters.to) q=q.lte('created_at',filters.to+'T23:59:59Z');
+  if(f.status) q=q.eq('status',f.status);
+  if(f.kind) q=q.eq('kind',f.kind);
+  if(f.from) q=q.gte('created_at',f.from+'T00:00:00Z');
+  if(f.to) q=q.lte('created_at',f.to+'T23:59:59Z');
   const { data, error } = await q;
   if(error) throw error;
   return data||[];
 }
 
 let LOAD_TOKEN=0;
-async function load(filters=readFilters()){
+async function load(f=readFilters()){
   const token=++LOAD_TOKEN;
   UI.tbody.innerHTML='<tr><td colspan="8">Loading…</td></tr>';
   try{
-    const rows=await fetchRequests(filters);
+    const rows=await fetchRequests(f);
     if(token!==LOAD_TOKEN) return;
     UI.tbody.innerHTML='';
     for(const r of rows){
-      const staff = await nameFor(r.user_id);
+      const staff=await nameFor(r.user_id);
       const { data:notes } = await sb.from('request_notes').select('note').eq('request_id',r.id);
       const rec=(notes||[]).find(n=>typeof n.note==='string' && n.note.startsWith('receipt:'));
-      let link=''; if(rec){ const url=await signedUrl(rec.note.replace('receipt:','')); if(url) link=`<a href="${url}" target="_blank" rel="noopener">View</a>`; }
+      const link = rec ? `<a target="_blank" rel="noopener" href="${await signedUrl(rec.note.replace('receipt:',''))}">View</a>` : '';
 
-      const selId=`sel-${r.id}`, cId=`com-${r.id}`, btnId=`btn-${r.id}`;
+      const sel=`sel-${r.id}`, com=`com-${r.id}`, btn=`btn-${r.id}`;
       const options=['Pending','Approved','Declined','Paid'].map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('');
+      const descSafe=String(r.description||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
-      /* escape description to avoid XSS */
-      const descSafe = String(r.description||'')
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-
-      UI.tbody.insertAdjacentHTML('beforeend', `
+      UI.tbody.insertAdjacentHTML('beforeend',`
         <tr>
           <td>${new Date(r.created_at).toLocaleDateString()}</td>
           <td>${staff}</td>
           <td>${r.kind.replace('_',' ')}</td>
-          <td class="desc" title="${descSafe}">${descSafe}</td>
+          <td title="${descSafe}">${descSafe}</td>
           <td>${fmt(r.amount,r.currency)}</td>
           <td>${pill(r.status)}</td>
           <td>
             <div class="row" style="gap:6px;align-items:center">
-              <div style="flex:1 1 120px"><select id="${selId}">${options}</select></div>
-              <div style="flex:2 1 260px"><input id="${cId}" placeholder="Comment to staff (reason / note)"></div>
-              <div style="flex:0 0 auto"><button id="${btnId}" class="btn">Update</button></div>
+              <div style="flex:1 1 120px"><select id="${sel}">${options}</select></div>
+              <div style="flex:2 1 260px"><input id="${com}" placeholder="Comment to staff (reason / note)"></div>
+              <div style="flex:0 0 auto"><button id="${btn}" class="btn" type="button">Update</button></div>
             </div>
           </td>
           <td>${link}</td>
         </tr>
       `);
-
-      document.getElementById(btnId).onclick = ()=> updateStatus(r.id,
-        document.getElementById(selId).value,
-        document.getElementById(cId).value.trim()
-      );
+      document.getElementById(btn).onclick = ()=> updateStatus(r.id, document.getElementById(sel).value, document.getElementById(com).value.trim());
     }
   }catch(err){
-    UI.tbody.innerHTML = `<tr><td colspan="8">${err.message||String(err)}</td></tr>`;
+    UI.tbody.innerHTML=`<tr><td colspan="8">${err.message||String(err)}</td></tr>`;
   }
 }
 
-/* ===== Update status ===== */
-async function updateStatus(id, next, comment){
+/* ---- update ---- */
+async function updateStatus(id,next,comment){
   try{
     if(next==='Paid'){
-      const method = prompt('Payment method (e.g., Transfer, Cash, PayPal):','Transfer'); if(method===null) return;
-      const reference = prompt('Reference / Transaction ID:','');
-      await sb.from('payouts').insert({ request_id:id, paid_by:user.id, method, reference });
+      const method=prompt('Payment method (e.g., Transfer, Cash, PayPal):','Transfer'); if(method===null) return;
+      const reference=prompt('Reference / Transaction ID:','');
+      await sb.from('payouts').insert({ request_id:id, paid_by:me.id, method, reference });
     }
-    await sb.from('requests').update({ status: next }).eq('id', id);
-    if(comment){ await sb.from('request_notes').insert({ request_id:id, author_id:user.id, note: comment }); }
-    await sb.from('request_notes').insert({ request_id:id, author_id:user.id, note:`Status -> ${next}` });
-    await load(); calcPaidTotals();
+    await sb.from('requests').update({ status: next }).eq('id',id);
+    if(comment) await sb.from('request_notes').insert({ request_id:id, author_id:me.id, note:comment });
+    await sb.from('request_notes').insert({ request_id:id, author_id:me.id, note:`Status -> ${next}` });
+    await load(); calcTotals();
   }catch(err){ alert(err.message||String(err)); }
 }
 
-/* ===== Totals (Paid by currency; respects date filters) ===== */
-async function calcPaidTotals(){
+/* ---- totals ---- */
+async function calcTotals(){
   const f=readFilters();
   let q=sb.from('requests').select('amount,currency').eq('status','Paid');
-  if(f.from) q=q.gte('created_at', f.from+'T00:00:00Z');
-  if(f.to)   q=q.lte('created_at', f.to+'T23:59:59Z');
+  if(f.from) q=q.gte('created_at',f.from+'T00:00:00Z');
+  if(f.to)   q=q.lte('created_at',f.to+'T23:59:59Z');
   const { data, error } = await q;
   if(error){ UI.totals.textContent='Totals: error'; return; }
-  const summary = summarizePaidTotals(data||[]);
-  UI.totals.textContent = formatPaidTotalsLabel(summary);
+  UI.totals.textContent = jmFormatTotalsLabel(jmSummarizePaidTotals(data||[]));
 }
 
-/* ===== Filters + export ===== */
-el('btn-filter').onclick=()=>{ load(); calcPaidTotals(); };
-el('btn-clear').onclick =()=>{ el('f-status').value=''; el('f-kind').value=''; el('f-from').value=''; el('f-to').value=''; load(); calcPaidTotals(); };
-
+/* ---- filter/ui events ---- */
+el('btn-filter').onclick=()=>{ load(); calcTotals(); };
+el('btn-clear').onclick =()=>{ el('f-status').value=''; el('f-kind').value=''; el('f-from').value=''; el('f-to').value=''; load(); calcTotals(); };
 el('btn-export').onclick=async()=>{
   const { data, error } = await sb.from('requests').select('*').order('created_at',{ascending:false});
   if(error){ alert(error.message); return; }
   const rows=[['created_at','user_id','kind','description','amount','currency','needed_by','status','updated_at','id']];
-  (data||[]).forEach(r=>rows.push([
-    r.created_at,r.user_id,r.kind,r.description||'',r.amount,r.currency,r.needed_by||'',r.status,r.updated_at,r.id
-  ]));
+  (data||[]).forEach(r=>rows.push([r.created_at,r.user_id,r.kind,r.description||'',r.amount,r.currency,r.needed_by||'',r.status,r.updated_at,r.id]));
   const csv = rows.map(r=>r.map(x=>{ const s=String(x==null?'':x); return '"'+s.split('"').join('""')+'"'; }).join(',')).join('\n');
   const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download='julinemart_requests.csv'; a.click(); URL.revokeObjectURL(url);
