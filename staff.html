@@ -40,6 +40,16 @@
   a.switch{color:var(--jm-primary);text-decoration:none}
   .foot-note{font-size:12px;color:#6b7280}
   .hidden{display:none}
+
+  /* one-line filters */
+  .filters{display:flex; gap:8px; align-items:flex-end; flex-wrap:nowrap}
+  .filters > *{flex:0 0 auto}
+  .filters select{min-width:130px}
+  .filters input[type="date"]{width:140px}
+  .filters input[type="search"]{width:220px}
+  @media (max-width: 720px){
+    .filters{flex-wrap:wrap}
+  }
 </style>
 </head>
 <body>
@@ -105,14 +115,14 @@
   <section class="card hidden" id="page-mine">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <h3>My Requests</h3>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div class="filters">
         <select id="f-status">
           <option value="">Status: All</option>
           <option>Pending</option><option>Approved</option><option>Declined</option><option>Paid</option><option>Cancelled</option>
         </select>
         <input id="f-from" type="date" aria-label="From date">
         <input id="f-to" type="date" aria-label="To date">
-        <input id="f-q" type="search" placeholder="Search description…" style="min-width:200px">
+        <input id="f-q" type="search" placeholder="Search description…">
         <button id="btn-apply" class="btn" type="button">Apply</button>
         <button id="btn-clear" class="btn" type="button">Clear</button>
         <button id="btn-refresh" class="btn" type="button">Refresh</button>
@@ -125,6 +135,7 @@
   </section>
 </main>
 
+<!-- Supabase UMD -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 /* Supabase client */
@@ -141,7 +152,9 @@ let currentUser = null;
 let INITIALIZED = false;
 let LOAD_SEQ = 0;
 
-function show(section){ [signinCard,pageNew,pageMine].forEach(s=>s.classList.add('hidden')); section.classList.remove('hidden'); }
+function hide(elm){ elm.classList.add('hidden'); }
+function show(elm){ elm.classList.remove('hidden'); }
+
 btnSignout.onclick = async ()=>{ await sb.auth.signOut(); location.reload(); };
 
 function setBusy(button, txt){ if(!button) return; button.dataset.prev = button.textContent; button.textContent = txt; button.disabled = true; }
@@ -154,18 +167,18 @@ async function init(){
 
   if(currentUser){
     whoami.textContent = currentUser.email;
-    btnSignout.classList.remove('hidden');
-
-    // show both sections when logged in
-    pageNew.classList.remove('hidden');
-    pageMine.classList.remove('hidden');
-
+    show(btnSignout);
+    hide(signinCard);          // <<< hide login when logged in
+    show(pageNew);
+    show(pageMine);
     loadMine();
     enableRealtime();
   }else{
     whoami.textContent = "";
-    btnSignout.classList.add('hidden');
+    hide(btnSignout);
     show(signinCard);
+    hide(pageNew);
+    hide(pageMine);
   }
 }
 function initOnce(){ if (INITIALIZED) return; INITIALIZED = true; init(); }
@@ -192,7 +205,7 @@ el('btn-login').onclick = async (e)=>{
   try{
     const { error } = await sb.auth.signInWithPassword({ email, password });
     if(error) throw error;
-    location.reload();
+    // session will trigger onAuthStateChange -> init()
   }catch(err){ el('signin-msg').textContent = err.message || String(err); }
   finally{ clearBusy(btn); }
 };
@@ -207,8 +220,12 @@ el('btn-register').onclick = async (e)=>{
   try{
     const { data, error } = await sb.auth.signUp({ email, password });
     if(error) throw error;
-    if(data && data.session){ location.reload(); }
-    else { el('signin-msg').textContent = "Registered! Please log in."; }
+    if(data && data.session){
+      // logged in right away
+      init();
+    }else{
+      el('signin-msg').textContent = "Registered! Please log in.";
+    }
   }catch(err){
     el('signin-msg').textContent = err.message || String(err);
   }finally{ clearBusy(btn); }
@@ -301,7 +318,7 @@ async function loadMine(filters={}){
   }
 }
 
-/* PWA (kept, harmless if file not present) */
+/* PWA */
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js').catch(()=>{}); }
 </script>
 </body>
