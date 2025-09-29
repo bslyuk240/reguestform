@@ -6,133 +6,237 @@
 <title>JulineMart • Staff</title>
 <link rel="icon" href="logo.png">
 <style>
-  body{font-family:system-ui;background:#f6f8fa;margin:0}
-  header{background:#0E141B;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
-  .brand{display:flex;gap:8px;align-items:center}
-  .brand img{width:28px;height:28px;border-radius:6px}
-  .card{background:#fff;padding:16px;margin:20px auto;max-width:500px;border:1px solid #ddd;border-radius:12px}
-  input,button{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:1px solid #ccc;font-size:14px}
-  button{cursor:pointer;background:#08A045;color:#fff;border:none}
-  button.secondary{background:#ccc;color:#000}
+  :root{--jm-primary:#08A045; --jm-dark:#0E141B; --jm-bg:#F6F8FA; --jm-border:#E7EAEE;
+        --pill-pending:#fff3cd; --pill-pending-b:#ffe69c; --pill-approved:#d1e7dd; --pill-approved-b:#a3cfbb;
+        --pill-declined:#f8d7da; --pill-declined-b:#f1aeb5; --pill-paid:#cff4fc; --pill-paid-b:#9eeaf9;}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--jm-bg);color:#1f2937}
+  header{background:var(--jm-dark);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;gap:10px;align-items:center}
+  .brand img{width:28px;height:28px;border-radius:6px;object-fit:cover}
+  .brand h1{font-size:16px;margin:0}
+  .sub{opacity:.75;font-size:12px;margin-top:2px}
+  .btn{cursor:pointer;padding:9px 12px;border-radius:9px;border:1px solid var(--jm-border);background:#fff}
+  .btn.primary{background:var(--jm-primary);color:#fff;border-color:transparent}
+  .btn[disabled]{opacity:.6;cursor:not-allowed}
+  main{max-width:980px;margin:24px auto;padding:0 16px}
+  .card{background:#fff;border:1px solid var(--jm-border);border-radius:12px;padding:16px;margin-bottom:16px}
+  label{display:block;font-size:12px;color:#374151;margin-bottom:6px}
+  input,select,textarea{width:100%;padding:10px;border:1px solid #d8dbe0;border-radius:10px;font:inherit}
+  textarea{min-height:90px}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .row>*{flex:1 1 240px}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+  .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px}
+  .Pending{background:var(--pill-pending);border:1px solid var(--pill-pending-b)}
+  .Approved{background:var(--pill-approved);border:1px solid var(--pill-approved-b)}
+  .Declined{background:var(--pill-declined);border:1px solid var(--pill-declined-b)}
+  .Paid{background:var(--pill-paid);border:1px solid var(--pill-paid-b)}
+  a.switch{color:var(--jm-primary);text-decoration:none}
+  .foot-note{font-size:12px;color:#6b7280}
   .hidden{display:none}
-  .pill{padding:2px 8px;border-radius:8px;font-size:12px}
-  .Pending{background:#fff3cd}
-  .Approved{background:#d1e7dd}
-  .Declined{background:#f8d7da}
-  .Paid{background:#cff4fc}
 </style>
 </head>
 <body>
 <header>
-  <div class="brand"><img src="logo.png"><b>JulineMart Staff</b></div>
-  <div><span id="whoami"></span> <button id="btn-signout" class="hidden">Sign out</button></div>
+  <div class="brand">
+    <img src="logo.png" alt="JM">
+    <div>
+      <h1>JulineMart • Staff</h1>
+      <div class="sub">Petty Cash & Reimbursements</div>
+    </div>
+  </div>
+  <div>
+    <span id="whoami"></span>
+    <button id="btn-signout" class="btn hidden" type="button">Sign out</button>
+  </div>
 </header>
 
 <main>
-  <!-- LOGIN/REGISTER -->
-  <div id="auth-card" class="card">
-    <h3>Staff Login</h3>
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Password">
-    <button id="btn-login">Log in</button>
-    <button id="btn-register" class="secondary">Register</button>
-    <p id="auth-msg"></p>
+  <!-- LOGIN / REGISTER -->
+  <div class="card" id="signin-card">
+    <h3>Staff Access</h3>
+    <div class="row">
+      <div><label>Email</label><input type="email" id="email" placeholder="you@julinemart.com" autocomplete="username"></div>
+      <div><label>Password</label><input type="password" id="password" placeholder="Enter password" autocomplete="current-password"></div>
+    </div>
+    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button id="btn-login" class="btn primary" type="button">Log in</button>
+      <button id="btn-register" class="btn" type="button">Register</button>
+    </div>
+    <p id="signin-msg" class="foot-note"></p>
+    <p class="foot-note">Admin? <a class="switch" href="admin.html">Go to Admin</a></p>
   </div>
 
   <!-- NEW REQUEST -->
-  <div id="new-card" class="card hidden">
+  <section class="card hidden" id="page-new">
     <h3>New Request</h3>
-    <select id="kind">
-      <option value="petty_cash">Petty Cash</option>
-      <option value="reimbursement">Reimbursement</option>
-    </select>
-    <input type="number" id="amount" placeholder="Amount">
-    <select id="currency"><option>GBP</option><option>NGN</option><option>USD</option></select>
-    <input type="date" id="needed_by">
-    <textarea id="description" placeholder="Description"></textarea>
-    <button id="btn-submit">Submit Request</button>
-    <p id="new-msg"></p>
-  </div>
+    <div class="row">
+      <div>
+        <label>Type</label>
+        <select id="kind">
+          <option value="petty_cash">Petty Cash (advance)</option>
+          <option value="reimbursement">Reimbursement (pay me back)</option>
+        </select>
+      </div>
+      <div><label>Amount</label><input type="number" step="0.01" id="amount" placeholder="0.00"></div>
+      <div><label>Currency</label>
+        <select id="currency"><option>GBP</option><option>NGN</option><option>USD</option><option>EUR</option></select>
+      </div>
+      <div><label>Needed by (optional)</label><input type="date" id="needed_by"></div>
+    </div>
+    <label>Description / Purpose</label>
+    <textarea id="description" placeholder="What is this for?"></textarea>
+    <div style="margin-top:10px"><button id="submit-request" class="btn primary" type="button">Submit</button></div>
+    <p id="new-msg" class="foot-note"></p>
+  </section>
 
   <!-- MY REQUESTS -->
-  <div id="mine-card" class="card hidden">
-    <h3>My Requests</h3>
-    <table border="1" width="100%">
+  <section class="card hidden" id="page-mine">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3>My Requests</h3>
+      <button id="btn-refresh" class="btn" type="button">Refresh</button>
+    </div>
+    <table id="mine-table">
       <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead>
-      <tbody id="mine-body"></tbody>
+      <tbody></tbody>
     </table>
-  </div>
+    <p class="foot-note" style="margin-top:10px">Admin? <a class="switch" href="admin.html">Go to Admin</a></p>
+  </section>
 </main>
 
+<!-- Supabase UMD -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
+/* Your real Supabase credentials (from your message) */
 const sb = supabase.createClient(
   "https://hmguraxzebhspednbbav.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o"
 );
 
 const el = id => document.getElementById(id);
-const authCard = el("auth-card"), newCard = el("new-card"), mineCard = el("mine-card");
+const signinCard = el('signin-card'), pageNew = el('page-new'), pageMine = el('page-mine');
+const whoami = el('whoami'), btnSignout = el('btn-signout');
 let currentUser = null;
 
-function showAuth(){authCard.classList.remove("hidden"); newCard.classList.add("hidden"); mineCard.classList.add("hidden");}
-function showApp(){authCard.classList.add("hidden"); newCard.classList.remove("hidden"); mineCard.classList.remove("hidden");}
+function show(section){ [signinCard,pageNew,pageMine].forEach(s=>s.classList.add('hidden')); section.classList.remove('hidden'); }
+btnSignout.onclick = async ()=>{ await sb.auth.signOut(); location.reload(); };
+
+function setBusy(button, txt){
+  if(!button) return;
+  button.dataset.prev = button.textContent;
+  button.textContent = txt;
+  button.disabled = true;
+  // failsafe: auto-clear after 20s in case of unexpected issues
+  button.dataset.timer = setTimeout(()=>{ clearBusy(button); }, 20000);
+}
+function clearBusy(button){
+  if(!button) return;
+  if(button.dataset.timer){ clearTimeout(button.dataset.timer); delete button.dataset.timer; }
+  button.disabled = false;
+  button.textContent = button.dataset.prev || button.textContent;
+}
 
 async function init(){
-  const { data:{ session } } = await sb.auth.getSession();
+  const { data:{ session }, error } = await sb.auth.getSession();
+  if(error) console.warn("getSession error:", error);
   currentUser = session?.user ?? null;
-  console.log("Session on init:", session);
+  console.log("INIT session:", session);
   if(currentUser){
-    el("whoami").textContent = currentUser.email;
-    el("btn-signout").classList.remove("hidden");
-    showApp(); loadMine();
+    whoami.textContent = currentUser.email;
+    btnSignout.classList.remove('hidden');
+    show(pageNew);
+    loadMine();
   }else{
-    el("whoami").textContent = "";
-    el("btn-signout").classList.add("hidden");
-    showAuth();
+    whoami.textContent = "";
+    btnSignout.classList.add('hidden');
+    show(signinCard);
   }
 }
-sb.auth.onAuthStateChange((_event, session)=>{console.log("Auth state:",_event,session); init();});
+sb.auth.onAuthStateChange((evt, session)=>{ console.log("AUTH EVENT:", evt, session); init(); });
 
-el("btn-signout").onclick = async()=>{ await sb.auth.signOut(); location.reload(); };
-
-el("btn-register").onclick = async()=>{
-  const email = el("email").value, pw = el("password").value;
-  el("auth-msg").textContent="Registering…";
-  const { data, error } = await sb.auth.signUp({ email, password: pw });
-  console.log("Register result:", data, error);
-  if(error){ el("auth-msg").textContent=error.message; return; }
-  if(data.session){ location.reload(); } else { el("auth-msg").textContent="Registered! Please log in."; }
+el('btn-login').onclick = async (e)=>{
+  e.preventDefault();
+  const btn = e.currentTarget;
+  const email = el('email').value.trim();
+  const password = el('password').value.trim();
+  if(!email || !password){ el('signin-msg').textContent = "Enter email & password."; return; }
+  setBusy(btn, "Logging in…");
+  try{
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    console.log("Login result:", { data, error });
+    if(error) throw error;
+    location.reload();
+  }catch(err){
+    el('signin-msg').textContent = err.message || String(err);
+  }finally{
+    clearBusy(btn);
+  }
 };
 
-el("btn-login").onclick = async()=>{
-  const email = el("email").value, pw = el("password").value;
-  el("auth-msg").textContent="Logging in…";
-  const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
-  console.log("Login result:", data, error);
-  if(error){ el("auth-msg").textContent=error.message; return; }
-  location.reload();
+el('btn-register').onclick = async (e)=>{
+  e.preventDefault();
+  const btn = e.currentTarget;
+  const email = el('email').value.trim();
+  const password = el('password').value.trim();
+  if(!email || !password){ el('signin-msg').textContent = "Enter email & password."; return; }
+  setBusy(btn, "Registering…");
+  try{
+    const { data, error } = await sb.auth.signUp({ email, password });
+    console.log("Register result:", { data, error });
+    if(error) throw error;
+    if(data && data.session){ location.reload(); }
+    else { el('signin-msg').textContent = "Registered! Please log in."; }
+  }catch(err){
+    el('signin-msg').textContent = err.message || String(err);
+  }finally{
+    clearBusy(btn);
+  }
 };
 
-el("btn-submit").onclick = async()=>{
-  const kind=el("kind").value, amount=parseFloat(el("amount").value||0), currency=el("currency").value;
-  const desc=el("description").value;
-  if(!amount||!desc){el("new-msg").textContent="Fill all fields";return;}
-  const { data,error } = await sb.from("requests").insert({ user_id: currentUser.id, kind, amount, currency, description: desc }).select().single();
-  console.log("Insert request:", data, error);
-  if(error){el("new-msg").textContent=error.message;return;}
-  el("new-msg").textContent="Submitted!"; loadMine();
+el('btn-refresh').onclick = (e)=>{ e.preventDefault(); loadMine(); };
+
+el('submit-request').onclick = async (e)=>{
+  e.preventDefault();
+  try{
+    if(!currentUser){ el('new-msg').textContent = "Please log in first."; return; }
+    const kind = el('kind').value;
+    const amount = parseFloat(el('amount').value || '0');
+    const currency = el('currency').value;
+    const needed_by = el('needed_by').value || null;
+    const description = el('description').value.trim();
+    if(!description || !(amount > 0)){ el('new-msg').textContent = "Fill description and amount."; return; }
+    const { data, error } = await sb.from('requests').insert({ user_id: currentUser.id, kind, amount, currency, needed_by, description }).select().single();
+    console.log("Insert request:", { data, error });
+    if(error){ el('new-msg').textContent = error.message; return; }
+    el('new-msg').textContent = "Request submitted.";
+    el('amount').value=""; el('description').value=""; el('needed_by').value="";
+    loadMine();
+  }catch(err){ el('new-msg').textContent = err.message || String(err); }
 };
+
+function pill(s){ return `<span class="pill ${s}">${s}</span>`; }
+function fmt(a,c){ return `${c} ${Number(a).toFixed(2)}`; }
 
 async function loadMine(){
-  const { data, error } = await sb.from("requests").select("*").eq("user_id", currentUser.id).order("created_at",{ascending:false});
-  console.log("Load mine:", data, error);
-  const body=el("mine-body"); body.innerHTML="";
-  if(error){ body.innerHTML=`<tr><td colspan=4>${error.message}</td></tr>`; return; }
-  data.forEach(r=>{
-    body.innerHTML += `<tr><td>${new Date(r.created_at).toLocaleDateString()}</td><td>${r.kind}</td><td>${r.amount} ${r.currency}</td><td><span class="pill ${r.status}">${r.status}</span></td></tr>`;
-  });
+  const tbody = document.querySelector('#mine-table tbody');
+  tbody.innerHTML = '<tr><td colspan="4">Loading…</td></tr>';
+  const { data, error } = await sb.from('requests').select('*').order('created_at',{ascending:false});
+  console.log("Load mine:", { data, error });
+  if(error){ tbody.innerHTML = `<tr><td colspan="4">${error.message}</td></tr>`; return; }
+  tbody.innerHTML = '';
+  for(const r of data){
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td>${new Date(r.created_at).toLocaleDateString()}</td>
+        <td>${r.kind.replace('_',' ')}</td>
+        <td>${fmt(r.amount,r.currency)}</td>
+        <td>${pill(r.status)}</td>
+      </tr>`);
+  }
 }
+
 init();
 </script>
 </body>
