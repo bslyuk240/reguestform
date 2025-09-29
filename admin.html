@@ -95,13 +95,8 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="totals.js"></script>
 <script>
-/* Fallback if totals.js not present */
-const JT = window.JMTotals || {
-  summarizePaidTotals: rows => (rows||[]).reduce((m,r)=>{const c=(String(r?.currency??'').trim()||'UNK'); const a=Number(r?.amount??0)||0; m[c]=(m[c]||0)+a; return m;},{}),
-  formatPaidTotalsLabel: t => { const e=Object.entries(t||{}); return e.length ? 'Totals: '+e.map(([c,s])=>`${c} ${s.toFixed(2)}`).join(' • ') : 'Totals: 0'; }
-};
+console.log('Admin page loaded');
 
 const sb = supabase.createClient(
   "https://hmguraxzebhspednbbav.supabase.co",
@@ -110,7 +105,7 @@ const sb = supabase.createClient(
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: false  // we’re not using magic-link redirects here
+      detectSessionInUrl: false
     }
   }
 );
@@ -121,149 +116,229 @@ const UI={who:$('whoami'),out:$('btn-signout'),auth:$('auth'),msg:$('auth-msg'),
           totals:$('paid-totals'),form:$('admin-form'),email:$('email'),password:$('password')};
 let me=null;
 
-UI.top.classList.add('hidden'); UI.wrap.classList.add('hidden'); UI.out.classList.add('hidden');
-function showAdminUI(show){ UI.auth.classList.toggle('hidden',show); UI.top.classList.toggle('hidden',!show); UI.wrap.classList.toggle('hidden',!show); UI.out.classList.toggle('hidden',!show); }
+function showAdminUI(show){ 
+  UI.auth.classList.toggle('hidden',show); 
+  UI.top.classList.toggle('hidden',!show); 
+  UI.wrap.classList.toggle('hidden',!show); 
+  UI.out.classList.toggle('hidden',!show); 
+}
 
 async function init(){
-  const {data:{session}, error:sErr}=await sb.auth.getSession();
-  if(sErr){ UI.msg.textContent='Session error: '+sErr.message; return; }
-  me=session?.user||null;
-  if(!me){ UI.who.textContent=''; showAdminUI(false); return; }
-
-  UI.who.textContent=me.email;
-  const {data:prof, error:rErr}=await sb.from('profiles').select('role').eq('user_id',me.id).maybeSingle();
-  if(rErr){ UI.msg.textContent='Role check failed: '+rErr.message; showAdminUI(false); return; }
-  if((prof?.role||'staff')!=='admin'){ UI.msg.textContent='Access denied (not admin).'; showAdminUI(false); await sb.auth.signOut(); return; }
-
-  showAdminUI(true);
-  await load(); calcTotals();
-}
-sb.auth.onAuthStateChange(init); init();
-
-/* Login */
-const form = document.getElementById('admin-form');
-const msg = document.getElementById('auth-msg');
-
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  msg.style.color = '#666';
-  msg.textContent = 'Logging in...';
-  
+  console.log('Init called');
   try {
-    const email = document.getElementById('email').value.trim();
-    const pw = document.getElementById('password').value.trim();
+    const {data:{session}, error:sErr}=await sb.auth.getSession();
+    console.log('Session check:', session, sErr);
     
-    if (!email || !pw) {
-      msg.style.color = '#c00';
-      msg.textContent = 'Enter email & password.';
-      return;
+    if(sErr){ 
+      UI.msg.textContent='Session error: '+sErr.message; 
+      console.error('Session error:', sErr);
+      return; 
+    }
+    
+    me=session?.user||null;
+    if(!me){ 
+      console.log('No user session');
+      UI.who.textContent=''; 
+      showAdminUI(false); 
+      return; 
     }
 
+    UI.who.textContent=me.email;
+    console.log('User found:', me.email, 'Checking role...');
+    
+    const {data:prof, error:rErr}=await sb.from('profiles').select('role').eq('user_id',me.id).maybeSingle();
+    console.log('Role check:', prof, rErr);
+    
+    if(rErr){ 
+      UI.msg.textContent='Role check failed: '+rErr.message; 
+      console.error('Role error:', rErr);
+      showAdminUI(false); 
+      return; 
+    }
+    
+    const role = prof?.role || 'staff';
+    console.log('User role:', role);
+    
+    if(role !== 'admin'){ 
+      UI.msg.textContent='Access denied. Your role is: ' + role + '. Only admin can access this page.'; 
+      showAdminUI(false); 
+      await sb.auth.signOut(); 
+      return; 
+    }
+
+    console.log('Admin access granted');
+    showAdminUI(true);
+    await load(); 
+  } catch(err) {
+    console.error('Init error:', err);
+    UI.msg.textContent = 'Error: ' + (err.message || String(err));
+  }
+}
+
+// Don't auto-init on auth change during login to avoid race conditions
+let isLoggingIn = false;
+sb.auth.onAuthStateChange((event, session) => {
+  console.log('Auth state changed:', event, session?.user?.email);
+  if (!isLoggingIn && event === 'SIGNED_IN') {
+    init();
+  } else if (event === 'SIGNED_OUT') {
+    showAdminUI(false);
+  }
+});
+
+init();
+
+/* Login */
+UI.form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  isLoggingIn = true;
+  UI.msg.style.color = '#666';
+  UI.msg.textContent = 'Logging in...';
+  
+  try {
+    const email = UI.email.value.trim();
+    const pw = UI.password.value.trim();
+    
     console.log('Admin attempting login for:', email);
+    
+    if (!email || !pw) { 
+      UI.msg.style.color = '#c00';
+      UI.msg.textContent = 'Enter email & password.'; 
+      isLoggingIn = false;
+      return; 
+    }
 
     // Sign in
-    const { data, error } = await sb.auth.signInWithPassword({ 
-      email, 
-      password: pw 
-    });
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+    console.log('Login result:', data, error);
     
     if (error) {
-      console.error('Admin login error:', error);
+      console.error('Login error:', error);
       throw error;
     }
 
-    console.log('Admin login response:', data);
+    // Wait for session to be established
+    UI.msg.textContent = 'Verifying session...';
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Wait for session to persist
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const { data: sessionData } = await sb.auth.getSession();
+    console.log('Post-login session:', sessionData);
 
-    // Verify session
-    const { data: sessionCheck } = await sb.auth.getSession();
-    console.log('Admin session check:', sessionCheck);
-
-    if (!sessionCheck?.session) {
-      msg.style.color = '#c00';
-      msg.textContent = 'Login succeeded but session not created. Clear browser cache/cookies and retry.';
-      return;
+    if (!sessionData?.session) {
+      throw new Error('Session not created after login');
     }
 
-    // Check admin role
-    msg.textContent = 'Checking admin role...';
-    const uid = sessionCheck.session.user.id;
+    me = sessionData.session.user;
     
-    console.log('Checking role for user:', uid);
+    // Check role
+    UI.msg.textContent = 'Checking admin role...';
+    console.log('Checking role for:', me.id);
     
     const { data: prof, error: roleErr } = await sb
       .from('profiles')
       .select('role')
-      .eq('user_id', uid)
+      .eq('user_id', me.id)
       .maybeSingle();
     
     console.log('Role check result:', prof, roleErr);
     
     if (roleErr) {
-      msg.style.color = '#c00';
-      msg.textContent = 'Role check failed: ' + roleErr.message;
-      return;
+      throw new Error('Role check failed: ' + roleErr.message);
     }
     
-    const userRole = prof?.role || 'staff';
+    const role = prof?.role || 'staff';
+    console.log('User role is:', role);
     
-    if (userRole !== 'admin') {
-      msg.style.color = '#c00';
-      msg.textContent = 'Access denied. Your role is: ' + userRole + '. Only admin users can access this page.';
+    if (role !== 'admin') {
       await sb.auth.signOut();
-      return;
+      throw new Error('Access denied. Your role is: ' + role + '. Only admin users can access this page.');
     }
 
     // Success
-    me = sessionCheck.session.user;
     UI.who.textContent = me.email;
-    msg.style.color = '#0a0';
-    msg.textContent = 'Welcome, admin.';
+    UI.msg.style.color = '#0a0';
+    UI.msg.textContent = 'Welcome, admin.';
     
     showAdminUI(true);
     await load();
-    await calcTotals();
     
   } catch (err) {
     console.error('Admin login failed:', err);
-    msg.style.color = '#c00';
+    UI.msg.style.color = '#c00';
     
     if (err.message?.includes('Invalid login credentials')) {
-      msg.textContent = 'Invalid email or password.';
+      UI.msg.textContent = 'Invalid email or password.';
     } else {
-      msg.textContent = err.message || String(err);
+      UI.msg.textContent = err.message || String(err);
     }
+  } finally {
+    isLoggingIn = false;
   }
 });
 
 /* Sign out */
-UI.out.onclick=async()=>{ try{ await sb.auth.signOut(); } finally { showAdminUI(false); location.href='staff.html'; } };
+UI.out.onclick=async()=>{ 
+  try{ 
+    await sb.auth.signOut(); 
+  } finally { 
+    showAdminUI(false); 
+    location.href='staff.html'; 
+  } 
+};
 
 /* Helpers */
 function pill(s){return `<span class="pill ${s}">${s}</span>`;}
 function fmt(a,c){return `${c} ${Number(a||0).toFixed(2)}`;}
-async function signedUrl(path){ if(!path) return ''; const {data}=await sb.storage.from('receipts').createSignedUrl(path,600); return data?.signedUrl||''; }
+async function signedUrl(path){ 
+  if(!path) return ''; 
+  const {data}=await sb.storage.from('receipts').createSignedUrl(path,600); 
+  return data?.signedUrl||''; 
+}
+
 const nameCache=new Map();
-async function nameFor(user_id){ if(nameCache.has(user_id)) return nameCache.get(user_id);
+async function nameFor(user_id){ 
+  if(nameCache.has(user_id)) return nameCache.get(user_id);
   const {data}=await sb.from('profiles').select('full_name,email').eq('user_id',user_id).maybeSingle();
   const name=(data?.full_name&&data.full_name.trim())||data?.email||(user_id||'').slice(0,8);
-  nameCache.set(user_id,name); return name; }
-function escapeHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+  nameCache.set(user_id,name); 
+  return name; 
+}
+
+function escapeHtml(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 
 /* Data */
-function readFilters(){ return { status:$('f-status').value||null, kind:$('f-kind').value||null, from:$('f-from').value||null, to:$('f-to').value||null }; }
-async function fetchRequests(f={}){ let q=sb.from('requests').select('*').order('created_at',{ascending:false});
-  if(f.status) q=q.eq('status',f.status); if(f.kind) q=q.eq('kind',f.kind);
-  if(f.from) q=q.gte('created_at',f.from+'T00:00:00Z'); if(f.to) q=q.lte('created_at',f.to+'T23:59:59Z');
-  const {data,error}=await q; if(error) throw error; return data||[]; }
+function readFilters(){ 
+  return { 
+    status:$('f-status').value||null, 
+    kind:$('f-kind').value||null, 
+    from:$('f-from').value||null, 
+    to:$('f-to').value||null 
+  }; 
+}
+
+async function fetchRequests(f={}){ 
+  let q=sb.from('requests').select('*').order('created_at',{ascending:false});
+  if(f.status) q=q.eq('status',f.status); 
+  if(f.kind) q=q.eq('kind',f.kind);
+  if(f.from) q=q.gte('created_at',f.from+'T00:00:00Z'); 
+  if(f.to) q=q.lte('created_at',f.to+'T23:59:59Z');
+  const {data,error}=await q; 
+  if(error) throw error; 
+  return data||[]; 
+}
 
 let LOAD_TOKEN=0;
 async function load(f=readFilters()){
-  const token=++LOAD_TOKEN; UI.tbody.innerHTML='<tr><td colspan="8">Loading…</td></tr>';
+  const token=++LOAD_TOKEN; 
+  UI.tbody.innerHTML='<tr><td colspan="8">Loading...</td></tr>';
+  
   try{
-    const rows=await fetchRequests(f); if(token!==LOAD_TOKEN) return; UI.tbody.innerHTML='';
+    const rows=await fetchRequests(f); 
+    if(token!==LOAD_TOKEN) return; 
+    UI.tbody.innerHTML='';
+    
     for(const r of rows){
       const staff=await nameFor(r.user_id);
       const {data:notes}=await sb.from('request_notes').select('note').eq('request_id',r.id);
@@ -272,6 +347,7 @@ async function load(f=readFilters()){
       const sel=`sel-${r.id}`, com=`com-${r.id}`, btn=`btn-${r.id}`;
       const options=['Pending','Approved','Declined','Paid'].map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('');
       const descSafe=escapeHtml(r.description||'');
+      
       UI.tbody.insertAdjacentHTML('beforeend',`
         <tr>
           <td>${new Date(r.created_at).toLocaleDateString()}</td>
@@ -289,45 +365,64 @@ async function load(f=readFilters()){
           </td>
           <td>${link}</td>
         </tr>`);
+      
       document.getElementById(btn).onclick=()=>updateStatus(r.id,document.getElementById(sel).value,document.getElementById(com).value.trim());
     }
-  }catch(err){ UI.tbody.innerHTML=`<tr><td colspan="8">${err.message||String(err)}</td></tr>`; }
+  }catch(err){ 
+    UI.tbody.innerHTML=`<tr><td colspan="8">${err.message||String(err)}</td></tr>`; 
+  }
 }
 
 async function updateStatus(id,next,comment){
   try{
     if(next==='Paid'){
-      const method=prompt('Payment method (e.g., Transfer, Cash, PayPal):','Transfer'); if(method===null) return;
+      const method=prompt('Payment method (e.g., Transfer, Cash, PayPal):','Transfer'); 
+      if(method===null) return;
       const reference=prompt('Reference / Transaction ID:','');
       await sb.from('payouts').insert({request_id:id,paid_by:me.id,method,reference});
     }
+    
     await sb.from('requests').update({status:next}).eq('id',id);
     if(comment) await sb.from('request_notes').insert({request_id:id,author_id:me.id,note:comment});
     await sb.from('request_notes').insert({request_id:id,author_id:me.id,note:`Status -> ${next}`});
-    await load(); calcTotals();
-  }catch(err){ alert(err.message||String(err)); }
-}
-
-async function calcTotals(){
-  const f=readFilters();
-  let q=sb.from('requests').select('amount,currency').eq('status','Paid');
-  if(f.from) q=q.gte('created_at',f.from+'T00:00:00Z');
-  if(f.to)   q=q.lte('created_at',f.to+'T23:59:59Z');
-  const {data,error}=await q; if(error){ UI.totals.textContent='Totals: error'; return; }
-  const totals = JT.summarizePaidTotals(data||[]);
-  UI.totals.textContent = JT.formatPaidTotalsLabel(totals);
+    await load();
+  }catch(err){ 
+    alert(err.message||String(err)); 
+  }
 }
 
 /* Filters + export */
-$('btn-filter').onclick=()=>{ load(); calcTotals(); };
-$('btn-clear').onclick =()=>{ $('f-status').value=''; $('f-kind').value=''; $('f-from').value=''; $('f-to').value=''; load(); calcTotals(); };
-$('btn-export').onclick=async()=>{ const {data,error}=await sb.from('requests').select('*').order('created_at',{ascending:false});
+$('btn-filter').onclick=()=>load();
+$('btn-clear').onclick=()=>{ 
+  $('f-status').value=''; 
+  $('f-kind').value=''; 
+  $('f-from').value=''; 
+  $('f-to').value=''; 
+  load(); 
+};
+
+$('btn-export').onclick=async()=>{ 
+  const {data,error}=await sb.from('requests').select('*').order('created_at',{ascending:false});
   if(error){ alert(error.message); return; }
+  
   const rows=[['created_at','user_id','kind','description','amount','currency','needed_by','status','updated_at','id']];
   (data||[]).forEach(r=>rows.push([r.created_at,r.user_id,r.kind,r.description||'',r.amount,r.currency,r.needed_by||'',r.status,r.updated_at,r.id]));
-  const csv=rows.map(r=>r.map(x=>{const s=String(x==null?'':x);return '"'+s.split('"').join('""')+'"';}).join(',')).join('\n');
-  const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='julinemart_requests.csv'; a.click(); URL.revokeObjectURL(url); };
+  
+  const csv=rows.map(r=>r.map(x=>{
+    const s=String(x==null?'':x);
+    return '"'+s.split('"').join('""')+'"';
+  }).join(',')).join('\n');
+  
+  const blob=new Blob([csv],{type:'text/csv'}); 
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); 
+  a.href=url; 
+  a.download='julinemart_requests.csv'; 
+  a.click(); 
+  URL.revokeObjectURL(url); 
+};
+
+console.log('Admin script loaded');
 </script>
 </body>
 </html>
