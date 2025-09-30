@@ -6,38 +6,241 @@
 <title>JulineMart • Admin</title>
 <link rel="icon" href="logo.png">
 <style>
-  :root{--jm-primary:#08A045;--jm-dark:#0E141B;--jm-border:#E7EAEE;}
-  *{box-sizing:border-box}
-  body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-  header{background:#0E141B;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+  :root{
+    --jm-primary:#08A045;
+    --jm-primary-light:#0bc252;
+    --jm-dark:#0E141B;
+    --jm-border:#E7EAEE;
+    --jm-bg:#F8F9FA;
+    --jm-card:#FFFFFF;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    background:var(--jm-bg);
+  }
+  header{
+    background:var(--jm-dark);
+    color:#fff;
+    padding:16px 20px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    position:sticky;
+    top:0;
+    z-index:100;
+    box-shadow:0 2px 8px rgba(0,0,0,0.1);
+  }
   .brand{display:flex;gap:10px;align-items:center}
-  .brand img{width:28px;height:28px;border-radius:6px}
-  .btn{cursor:pointer;padding:8px 10px;border-radius:8px;border:1px solid var(--jm-border);background:#fff}
-  .btn.primary{background:var(--jm-primary);color:#fff;border-color:transparent}
-  .btn[disabled]{opacity:.6;cursor:not-allowed}
-  main{max-width:1100px;margin:24px auto;padding:0 16px}
-  .card{background:#fff;border:1px solid var(--jm-border);border-radius:12px;padding:16px;margin-bottom:16px}
-  .row{display:flex;gap:8px;flex-wrap:wrap}
-  .row>*{flex:1 1 220px}
-  input,select{width:100%;padding:9px;border:1px solid #d8dbe0;border-radius:10px;font:inherit}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
-  .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px}
-  .Pending{background:#fff3cd;border:1px solid #ffe69c}
-  .Approved{background:#d1e7dd;border:1px solid #a3cfbb}
-  .Declined{background:#f8d7da;border:1px solid #f1aeb5}
-  .Paid{background:#cff4fc;border:1px solid #9eeaf9}
+  .brand img{width:32px;height:32px;border-radius:8px}
+  .brand b{font-size:16px}
+  .user-info{display:flex;align-items:center;gap:12px}
+  .btn{
+    cursor:pointer;
+    padding:10px 16px;
+    border-radius:8px;
+    border:1px solid var(--jm-border);
+    background:#fff;
+    font:inherit;
+    transition:all 0.2s;
+  }
+  .btn:hover{transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+  .btn.primary{
+    background:var(--jm-primary);
+    color:#fff;
+    border-color:transparent;
+  }
+  .btn.primary:hover{background:var(--jm-primary-light)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed;transform:none}
+  
+  main{max-width:1400px;margin:0 auto;padding:20px}
+  
+  .card{
+    background:var(--jm-card);
+    border-radius:12px;
+    padding:20px;
+    margin-bottom:20px;
+    box-shadow:0 1px 3px rgba(0,0,0,0.08);
+  }
+  
+  /* Login Card */
+  .login-card{max-width:500px;margin:60px auto}
+  .login-card h3{margin-bottom:20px;color:var(--jm-dark)}
+  
+  /* Stats Bar */
+  .stats-bar{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:16px;
+    margin-bottom:20px;
+  }
+  .stat-card{
+    background:var(--jm-card);
+    padding:20px;
+    border-radius:12px;
+    box-shadow:0 1px 3px rgba(0,0,0,0.08);
+  }
+  .stat-label{
+    font-size:12px;
+    color:#6b7280;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    margin-bottom:8px;
+  }
+  .stat-value{
+    font-size:24px;
+    font-weight:600;
+    color:var(--jm-dark);
+  }
+  
+  /* Filters */
+  .filters-section{
+    background:var(--jm-card);
+    padding:20px;
+    border-radius:12px;
+    margin-bottom:20px;
+    box-shadow:0 1px 3px rgba(0,0,0,0.08);
+  }
+  .filters-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:12px;
+    margin-bottom:16px;
+  }
+  .filter-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  
+  input,select{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--jm-border);
+    border-radius:8px;
+    font:inherit;
+    transition:border-color 0.2s;
+  }
+  input:focus,select:focus{
+    outline:none;
+    border-color:var(--jm-primary);
+  }
+  label{
+    display:block;
+    font-size:12px;
+    font-weight:500;
+    color:#6b7280;
+    margin-bottom:6px;
+  }
+  
+  /* Responsive Table */
+  .table-container{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:900px;
+  }
+  th{
+    background:#f9fafb;
+    padding:12px;
+    text-align:left;
+    font-weight:600;
+    font-size:12px;
+    color:#6b7280;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    border-bottom:2px solid var(--jm-border);
+  }
+  td{
+    padding:16px 12px;
+    border-bottom:1px solid #f3f4f6;
+    vertical-align:top;
+  }
+  tr:hover td{background:#f9fafb}
+  
+  .pill{
+    display:inline-block;
+    padding:4px 12px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:500;
+  }
+  .Pending{background:#fef3c7;color:#92400e}
+  .Approved{background:#d1fae5;color:#065f46}
+  .Declined{background:#fee2e2;color:#991b1b}
+  .Paid{background:#dbeafe;color:#1e40af}
+  
+  /* Action Controls */
+  .action-row{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  .action-row select{flex:1;min-width:120px}
+  .action-row input{flex:2;min-width:180px}
+  .action-row .btn{flex:0 0 auto;white-space:nowrap}
+  
+  /* Mobile Cards - Hidden by default */
+  .mobile-cards{display:none}
+  .request-card{
+    background:var(--jm-card);
+    border:1px solid var(--jm-border);
+    border-radius:12px;
+    padding:16px;
+    margin-bottom:16px;
+  }
+  .request-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:start;
+    margin-bottom:12px;
+  }
+  .request-info{margin-bottom:12px}
+  .info-row{
+    display:flex;
+    justify-content:space-between;
+    padding:8px 0;
+    border-bottom:1px solid #f3f4f6;
+  }
+  .info-label{font-size:12px;color:#6b7280;font-weight:500}
+  .info-value{font-size:14px;color:var(--jm-dark)}
+  
   .hidden{display:none !important}
-  #paid-totals{font-size:14px;background:#f6f8fa;border:1px solid #e7eaee;padding:6px 10px;border-radius:8px}
-  .foot{font-size:12px;color:#6b7280}
+  .foot{font-size:12px;color:#6b7280;margin-top:8px}
+  
+  /* Responsive */
+  @media (max-width:768px){
+    main{padding:12px}
+    .card{padding:16px}
+    .brand b{display:none}
+    .stats-bar{grid-template-columns:1fr 1fr}
+    .stat-card{padding:16px}
+    .stat-value{font-size:20px}
+    .filters-grid{grid-template-columns:1fr}
+    .table-container{display:none}
+    .mobile-cards{display:block}
+    header{padding:12px 16px}
+    .user-info span{display:none}
+  }
+  
+  @media (max-width:480px){
+    .stats-bar{grid-template-columns:1fr}
+    .filter-actions{flex-direction:column}
+    .filter-actions .btn{width:100%}
+  }
 </style>
 </head>
 <body>
 <header>
   <div class="brand">
-    <img src="logo.png" alt=""><b>JulineMart • Admin</b>
+    <img src="logo.png" alt="">
+    <b>JulineMart • Admin</b>
   </div>
-  <div>
+  <div class="user-info">
     <span id="whoami"></span>
     <button id="btn-signout" class="btn hidden" type="button">Sign out</button>
   </div>
@@ -45,53 +248,105 @@
 
 <main>
   <!-- Login -->
-  <section id="auth" class="card">
-    <h3>Admin sign-in</h3>
+  <section id="auth" class="login-card card">
+    <h3>Admin Sign-in</h3>
     <form id="admin-form" novalidate>
-      <div class="row">
-        <div>
-          <label>Email</label>
-          <input id="email" type="email" placeholder="you@julinemart.com" required />
-        </div>
-        <div>
-          <label>Password</label>
-          <input id="password" type="password" placeholder="Password" required />
-        </div>
+      <div style="margin-bottom:16px">
+        <label>Email</label>
+        <input id="email" type="email" placeholder="you@julinemart.com" required />
       </div>
-      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-        <button id="btn-login" class="btn primary" type="submit">Log in</button>
+      <div style="margin-bottom:16px">
+        <label>Password</label>
+        <input id="password" type="password" placeholder="Password" required />
+      </div>
+      <div style="display:flex;gap:8px;margin-top:20px">
+        <button class="btn primary" type="submit" style="flex:1">Log in</button>
         <a href="staff.html" class="btn" style="text-decoration:none">Go to Staff</a>
       </div>
       <p id="auth-msg" class="foot"></p>
     </form>
   </section>
 
-  <!-- Filters + totals -->
-  <section id="admin-top" class="card hidden" style="display:flex;justify-content:space-between;align-items:center">
-    <div>
-      <h3 style="margin:0">All Requests</h3>
-      <div class="row" style="margin-top:8px">
-        <div><select id="f-status"><option value="">Status: All</option><option>Pending</option><option>Approved</option><option>Declined</option><option>Paid</option></select></div>
-        <div><select id="f-kind"><option value="">Type: All</option><option value="petty_cash">Petty Cash</option><option value="reimbursement">Reimbursement</option></select></div>
-        <div><input id="f-from" type="date"></div>
-        <div><input id="f-to" type="date"></div>
-        <div style="flex:0 0 auto"><button id="btn-filter" class="btn" type="button">Apply</button></div>
-        <div style="flex:0 0 auto"><button id="btn-clear" class="btn" type="button">Clear</button></div>
+  <!-- Stats -->
+  <div id="stats-section" class="stats-bar hidden">
+    <div class="stat-card">
+      <div class="stat-label">Total Paid</div>
+      <div class="stat-value" id="stat-total">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Pending</div>
+      <div class="stat-value" id="stat-pending">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Approved</div>
+      <div class="stat-value" id="stat-approved">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Requests</div>
+      <div class="stat-value" id="stat-count">—</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <section id="filters-section" class="filters-section hidden">
+    <div class="filters-grid">
+      <div>
+        <label>Status</label>
+        <select id="f-status">
+          <option value="">All Status</option>
+          <option>Pending</option>
+          <option>Approved</option>
+          <option>Declined</option>
+          <option>Paid</option>
+        </select>
+      </div>
+      <div>
+        <label>Type</label>
+        <select id="f-kind">
+          <option value="">All Types</option>
+          <option value="petty_cash">Petty Cash</option>
+          <option value="reimbursement">Reimbursement</option>
+        </select>
+      </div>
+      <div>
+        <label>From Date</label>
+        <input id="f-from" type="date">
+      </div>
+      <div>
+        <label>To Date</label>
+        <input id="f-to" type="date">
       </div>
     </div>
-    <div style="text-align:right">
-      <div id="paid-totals" title="Sum of PAID requests (respects date filters)">Totals: —</div>
-      <button id="btn-export" class="btn primary" type="button" style="margin-top:8px">Export CSV</button>
+    <div class="filter-actions">
+      <button id="btn-filter" class="btn primary" type="button">Apply Filters</button>
+      <button id="btn-clear" class="btn" type="button">Clear</button>
+      <button id="btn-export" class="btn" type="button">Export CSV</button>
     </div>
   </section>
 
-  <!-- Table -->
-  <section id="admin-table-wrap" class="card hidden">
-    <table id="admin-table">
-      <thead><tr><th>Date</th><th>Staff</th><th>Type</th><th>Description</th><th>Amount</th><th>Status</th><th>Action</th><th>Receipt</th></tr></thead>
-      <tbody></tbody>
-    </table>
+  <!-- Desktop Table -->
+  <section id="table-section" class="card hidden">
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Staff</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Action</th>
+            <th>Receipt</th>
+          </tr>
+        </thead>
+        <tbody id="desktop-tbody"></tbody>
+      </table>
+    </div>
   </section>
+
+  <!-- Mobile Cards -->
+  <div id="mobile-cards" class="mobile-cards hidden"></div>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -101,35 +356,33 @@ console.log('Admin page loaded');
 const sb = supabase.createClient(
   "https://hmguraxzebhspednbbav.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o",
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: false
-    }
-  }
+  {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}}
 );
 
 const $=(id)=>document.getElementById(id);
-const UI={who:$('whoami'),out:$('btn-signout'),auth:$('auth'),msg:$('auth-msg'),
-          top:$('admin-top'),wrap:$('admin-table-wrap'),tbody:document.querySelector('#admin-table tbody'),
-          totals:$('paid-totals'),form:$('admin-form'),email:$('email'),password:$('password')};
+const UI={
+  who:$('whoami'),out:$('btn-signout'),auth:$('auth'),msg:$('auth-msg'),
+  stats:$('stats-section'),filters:$('filters-section'),table:$('table-section'),
+  desktopTbody:$('desktop-tbody'),mobileCards:$('mobile-cards'),
+  form:$('admin-form')
+};
 let me=null;
 
 function showAdminUI(show){ 
   UI.auth.classList.toggle('hidden',show); 
-  UI.top.classList.toggle('hidden',!show); 
-  UI.wrap.classList.toggle('hidden',!show); 
+  UI.stats.classList.toggle('hidden',!show);
+  UI.filters.classList.toggle('hidden',!show); 
+  UI.table.classList.toggle('hidden',!show);
+  UI.mobileCards.classList.toggle('hidden',!show);
   UI.out.classList.toggle('hidden',!show); 
 }
 
-/* Data */
 function readFilters(){ 
-  return { 
-    status:$('f-status').value||null, 
-    kind:$('f-kind').value||null, 
-    from:$('f-from').value||null, 
-    to:$('f-to').value||null 
+  return {
+    status:$('f-status').value||null,
+    kind:$('f-kind').value||null,
+    from:$('f-from').value||null,
+    to:$('f-to').value||null
   }; 
 }
 
@@ -144,351 +397,263 @@ async function fetchRequests(f={}){
   return data||[]; 
 }
 
-async function calcTotals(){
+async function calcStats(){
   const f=readFilters();
-  let q=sb.from('requests').select('amount,currency').eq('status','Paid');
+  let q=sb.from('requests').select('amount,currency,status');
   if(f.from) q=q.gte('created_at',f.from+'T00:00:00Z');
-  if(f.to)   q=q.lte('created_at',f.to+'T23:59:59Z');
-  const {data,error}=await q; 
-  if(error){ 
-    console.error('Totals calculation error:', error);
-    UI.totals.textContent='Totals: error'; 
-    return; 
+  if(f.to) q=q.lte('created_at',f.to+'T23:59:59Z');
+  
+  const {data,error}=await q;
+  if(error){console.error('Stats error:',error);return;}
+  
+  const totals={};
+  let pending=0,approved=0,paid=0;
+  
+  for(const r of(data||[])){
+    if(r.status==='Paid'){
+      const c=(r.currency||'UNK').trim()||'UNK';
+      totals[c]=(totals[c]||0)+Number(r.amount||0);
+      paid++;
+    }
+    if(r.status==='Pending')pending++;
+    if(r.status==='Approved')approved++;
   }
   
-  console.log('Calculating totals from data:', data);
+  const entries=Object.entries(totals);
+  const totalTxt=entries.length?entries.map(([c,s])=>`${c} ${s.toFixed(2)}`).join(' • '):'0';
   
-  // Calculate totals by currency
-  const totalsByCurrency = {};
-  for (const row of (data || [])) {
-    const currency = (row.currency || 'UNK').trim() || 'UNK';
-    const amount = Number(row.amount) || 0;
-    totalsByCurrency[currency] = (totalsByCurrency[currency] || 0) + amount;
-  }
-  
-  // Format display
-  const entries = Object.entries(totalsByCurrency);
-  if (entries.length === 0) {
-    UI.totals.textContent = 'Totals: 0';
-  } else {
-    const parts = entries.map(([currency, sum]) => `${currency} ${sum.toFixed(2)}`);
-    UI.totals.textContent = `Totals: ${parts.join(' • ')}`;
-  }
-  
-  console.log('Totals displayed:', UI.totals.textContent);
+  $('stat-total').textContent=totalTxt;
+  $('stat-pending').textContent=pending;
+  $('stat-approved').textContent=approved;
+  $('stat-count').textContent=(data||[]).length;
 }
 
 async function init(){
   console.log('Init called');
-  try {
-    const {data:{session}, error:sErr}=await sb.auth.getSession();
-    console.log('Session check:', session, sErr);
-    
-    if(sErr){ 
-      UI.msg.textContent='Session error: '+sErr.message; 
-      console.error('Session error:', sErr);
-      return; 
-    }
+  try{
+    const {data:{session},error:sErr}=await sb.auth.getSession();
+    if(sErr){UI.msg.textContent='Session error: '+sErr.message;return;}
     
     me=session?.user||null;
-    if(!me){ 
-      console.log('No user session');
-      UI.who.textContent=''; 
-      showAdminUI(false); 
-      return; 
+    if(!me){UI.who.textContent='';showAdminUI(false);return;}
+
+    await new Promise(r=>setTimeout(r,300));
+    
+    const {data:prof,error:rErr}=await sb.from('profiles').select('role,full_name,email').eq('user_id',me.id).maybeSingle();
+    if(rErr){UI.msg.textContent='Role check failed: '+rErr.message;showAdminUI(false);return;}
+    
+    const role=prof?.role||'staff';
+    if(role!=='admin'){
+      UI.msg.textContent='Access denied. Your role is: '+role;
+      showAdminUI(false);
+      await sb.auth.signOut();
+      return;
     }
 
-    UI.who.textContent=me.email;
-    console.log('User found:', me.email, 'Checking role...');
-    
-    const {data:prof, error:rErr}=await sb.from('profiles').select('role').eq('user_id',me.id).maybeSingle();
-    console.log('Role check:', prof, rErr);
-    
-    if(rErr){ 
-      UI.msg.textContent='Role check failed: '+rErr.message; 
-      console.error('Role error:', rErr);
-      showAdminUI(false); 
-      return; 
-    }
-    
-    const role = prof?.role || 'staff';
-    console.log('User role:', role);
-    
-    if(role !== 'admin'){ 
-      UI.msg.textContent='Access denied. Your role is: ' + role + '. Only admin can access this page.'; 
-      showAdminUI(false); 
-      await sb.auth.signOut(); 
-      return; 
-    }
-
-    console.log('Admin access granted');
-    
-    // Get and display admin's full name
-    const {data:adminProf} = await sb.from('profiles').select('full_name,email').eq('user_id',me.id).maybeSingle();
-    const displayName = (adminProf?.full_name && adminProf.full_name.trim()) || me.email;
-    UI.who.textContent = displayName;
-    console.log('Admin profile loaded:', displayName);
+    const displayName=(prof?.full_name&&prof.full_name.trim())||me.email;
+    UI.who.textContent=displayName;
     
     showAdminUI(true);
     await load();
-    await calcTotals(); 
-  } catch(err) {
-    console.error('Init error:', err);
-    UI.msg.textContent = 'Error: ' + (err.message || String(err));
+    await calcStats();
+  }catch(err){
+    console.error('Init error:',err);
+    UI.msg.textContent='Error: '+(err.message||String(err));
   }
 }
 
-// Don't auto-init on auth change during login to avoid race conditions
-let isLoggingIn = false;
-sb.auth.onAuthStateChange((event, session) => {
-  console.log('Auth state changed:', event, session?.user?.email);
-  if (!isLoggingIn && event === 'SIGNED_IN') {
-    init();
-  } else if (event === 'SIGNED_OUT') {
-    showAdminUI(false);
-  }
+let isLoggingIn=false;
+sb.auth.onAuthStateChange((event,session)=>{
+  console.log('Auth changed:',event);
+  if(!isLoggingIn&&event==='SIGNED_IN')init();
+  else if(event==='SIGNED_OUT')showAdminUI(false);
 });
-
 init();
 
 /* Login */
-UI.form.addEventListener('submit', async (e) => {
+UI.form.addEventListener('submit',async(e)=>{
   e.preventDefault();
-  isLoggingIn = true;
-  UI.msg.style.color = '#666';
-  UI.msg.textContent = 'Logging in...';
+  isLoggingIn=true;
+  UI.msg.style.color='#666';
+  UI.msg.textContent='Logging in...';
   
-  try {
-    const email = UI.email.value.trim();
-    const pw = UI.password.value.trim();
-    
-    console.log('Admin attempting login for:', email);
-    
-    if (!email || !pw) { 
-      UI.msg.style.color = '#c00';
-      UI.msg.textContent = 'Enter email & password.'; 
-      isLoggingIn = false;
-      return; 
-    }
+  try{
+    const email=$('email').value.trim();
+    const pw=$('password').value.trim();
+    if(!email||!pw){UI.msg.style.color='#c00';UI.msg.textContent='Enter email & password.';return;}
 
-    // Sign in
-    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
-    console.log('Login result:', data, error);
-    
-    if (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
+    const {data,error}=await sb.auth.signInWithPassword({email,password:pw});
+    if(error)throw error;
 
-    // Use the session from login response directly
-    UI.msg.textContent = 'Checking admin role...';
-    console.log('Using session from login response');
-
-    if (!data?.session) {
-      throw new Error('Session not created after login');
-    }
-
-    me = data.session.user;
-    
-    // Wait for session to stabilize before querying
-    UI.msg.textContent = 'Checking admin role...';
-    console.log('Checking role for:', me.id);
-    
-    // Give the session time to propagate through Supabase's system
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    let prof = null;
-    let roleErr = null;
-    
-    try {
-      console.log('Executing role query...');
-      
-      // Query with reasonable timeout (increased from 5s to 10s)
-      const queryPromise = sb
-        .from('profiles')
-        .select('role')
-        .eq('user_id', me.id)
-        .maybeSingle();
-      
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Query timed out after 10 seconds')), 10000)
-      );
-      
-      const result = await Promise.race([queryPromise, timeoutPromise]);
-      prof = result.data;
-      roleErr = result.error;
-      
-      console.log('Role check result:', prof, roleErr);
-    } catch (queryError) {
-      console.error('Role query failed:', queryError);
-      roleErr = queryError;
-    }
-    
-    if (!prof && !roleErr) {
-      console.warn('No profile found for user');
-      throw new Error('No profile found. Please contact administrator to set up your account.');
-    }
-    
-    if (roleErr) {
-      console.error('Role query error:', roleErr);
-      throw new Error('Role check failed: ' + roleErr.message);
-    }
-    
-    const role = prof?.role || 'staff';
-    console.log('User role is:', role);
-    
-    if (role !== 'admin') {
-      await sb.auth.signOut();
-      throw new Error('Access denied. Your role is: ' + role + '. Only admin users can access this page.');
-    }
-
-    // Success
-    UI.who.textContent = me.email; // Will be updated in init()
-    UI.msg.style.color = '#0a0';
-    UI.msg.textContent = 'Welcome, admin.';
-    
-    showAdminUI(true);
-    await init(); // This will load name, data, and totals
-    
-  } catch (err) {
-    console.error('Admin login failed:', err);
-    UI.msg.style.color = '#c00';
-    
-    if (err.message?.includes('Invalid login credentials')) {
-      UI.msg.textContent = 'Invalid email or password.';
-    } else {
-      UI.msg.textContent = err.message || String(err);
-    }
-  } finally {
-    isLoggingIn = false;
+    UI.msg.style.color='#0a0';
+    UI.msg.textContent='Welcome!';
+    await init();
+  }catch(err){
+    console.error('Login failed:',err);
+    UI.msg.style.color='#c00';
+    UI.msg.textContent=err.message?.includes('Invalid')?'Invalid email or password.':err.message||String(err);
+  }finally{
+    isLoggingIn=false;
   }
 });
 
-/* Sign out */
-UI.out.onclick=async()=>{ 
-  try{ 
-    await sb.auth.signOut(); 
-  } finally { 
-    showAdminUI(false); 
-    location.href='staff.html'; 
-  } 
+UI.out.onclick=async()=>{
+  try{await sb.auth.signOut();}finally{showAdminUI(false);location.href='staff.html';}
 };
 
 /* Helpers */
 function pill(s){return `<span class="pill ${s}">${s}</span>`;}
 function fmt(a,c){return `${c} ${Number(a||0).toFixed(2)}`;}
-async function signedUrl(path){ 
-  if(!path) return ''; 
-  const {data}=await sb.storage.from('receipts').createSignedUrl(path,600); 
-  return data?.signedUrl||''; 
+async function signedUrl(path){
+  if(!path)return'';
+  const {data}=await sb.storage.from('receipts').createSignedUrl(path,600);
+  return data?.signedUrl||'';
 }
-
 const nameCache=new Map();
-async function nameFor(user_id){ 
-  if(nameCache.has(user_id)) return nameCache.get(user_id);
-  const {data}=await sb.from('profiles').select('full_name,email').eq('user_id',user_id).maybeSingle();
-  const name=(data?.full_name&&data.full_name.trim())||data?.email||(user_id||'').slice(0,8);
-  nameCache.set(user_id,name); 
-  return name; 
+async function nameFor(uid){
+  if(nameCache.has(uid))return nameCache.get(uid);
+  const {data}=await sb.from('profiles').select('full_name,email').eq('user_id',uid).maybeSingle();
+  const name=(data?.full_name&&data.full_name.trim())||data?.email||(uid||'').slice(0,8);
+  nameCache.set(uid,name);
+  return name;
 }
-
 function escapeHtml(s){
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 let LOAD_TOKEN=0;
 async function load(f=readFilters()){
-  const token=++LOAD_TOKEN; 
-  UI.tbody.innerHTML='<tr><td colspan="8">Loading...</td></tr>';
+  const token=++LOAD_TOKEN;
+  UI.desktopTbody.innerHTML='<tr><td colspan="8">Loading...</td></tr>';
+  UI.mobileCards.innerHTML='<div style="padding:20px;text-align:center;color:#6b7280">Loading...</div>';
   
   try{
-    const rows=await fetchRequests(f); 
-    if(token!==LOAD_TOKEN) return; 
-    UI.tbody.innerHTML='';
+    const rows=await fetchRequests(f);
+    if(token!==LOAD_TOKEN)return;
+    
+    UI.desktopTbody.innerHTML='';
+    UI.mobileCards.innerHTML='';
     
     for(const r of rows){
       const staff=await nameFor(r.user_id);
       const {data:notes}=await sb.from('request_notes').select('note').eq('request_id',r.id);
-      const rec=(notes||[]).find(n=>typeof n.note==='string' && n.note.startsWith('receipt:'));
-      const link=rec?`<a target="_blank" rel="noopener" href="${await signedUrl(rec.note.replace('receipt:',''))}">View</a>`:'';
-      const sel=`sel-${r.id}`, com=`com-${r.id}`, btn=`btn-${r.id}`;
-      const options=['Pending','Approved','Declined','Paid'].map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('');
-      const descSafe=escapeHtml(r.description||'');
+      const rec=(notes||[]).find(n=>typeof n.note==='string'&&n.note.startsWith('receipt:'));
+      const link=rec?`<a target="_blank" href="${await signedUrl(rec.note.replace('receipt:',''))}" style="color:var(--jm-primary)">View</a>`:'—';
       
-      UI.tbody.insertAdjacentHTML('beforeend',`
+      const sel=`sel-${r.id}`,com=`com-${r.id}`,btn=`btn-${r.id}`;
+      const options=['Pending','Approved','Declined','Paid'].map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('');
+      const desc=escapeHtml(r.description||'');
+      
+      // Desktop row
+      UI.desktopTbody.insertAdjacentHTML('beforeend',`
         <tr>
           <td>${new Date(r.created_at).toLocaleDateString()}</td>
           <td>${staff}</td>
-          <td>${r.kind.replace('_',' ')}</td>
-          <td title="${descSafe}">${descSafe}</td>
-          <td>${fmt(r.amount,r.currency)}</td>
+          <td style="text-transform:capitalize">${r.kind.replace('_',' ')}</td>
+          <td title="${desc}">${desc.slice(0,40)}${desc.length>40?'...':''}</td>
+          <td><strong>${fmt(r.amount,r.currency)}</strong></td>
           <td>${pill(r.status)}</td>
           <td>
-            <div class="row" style="gap:6px;align-items:center">
-              <div style="flex:1 1 120px"><select id="${sel}">${options}</select></div>
-              <div style="flex:2 1 260px"><input id="${com}" placeholder="Comment to staff (reason / note)"></div>
-              <div style="flex:0 0 auto"><button id="${btn}" class="btn" type="button">Update</button></div>
+            <div class="action-row">
+              <select id="${sel}">${options}</select>
+              <input id="${com}" placeholder="Comment...">
+              <button id="${btn}" class="btn btn-sm">Update</button>
             </div>
           </td>
           <td>${link}</td>
-        </tr>`);
+        </tr>
+      `);
       
-      document.getElementById(btn).onclick=()=>updateStatus(r.id,document.getElementById(sel).value,document.getElementById(com).value.trim());
+      // Mobile card
+      UI.mobileCards.insertAdjacentHTML('beforeend',`
+        <div class="request-card">
+          <div class="request-header">
+            <div>
+              <strong style="display:block;margin-bottom:4px">${staff}</strong>
+              <span style="font-size:12px;color:#6b7280">${new Date(r.created_at).toLocaleDateString()}</span>
+            </div>
+            ${pill(r.status)}
+          </div>
+          <div class="request-info">
+            <div class="info-row">
+              <span class="info-label">Type</span>
+              <span class="info-value" style="text-transform:capitalize">${r.kind.replace('_',' ')}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Amount</span>
+              <span class="info-value"><strong>${fmt(r.amount,r.currency)}</strong></span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Description</span>
+              <span class="info-value">${desc}</span>
+            </div>
+            ${rec?`<div class="info-row"><span class="info-label">Receipt</span><span class="info-value">${link}</span></div>`:''}
+          </div>
+          <div style="margin-top:12px">
+            <select id="${sel}-m" style="margin-bottom:8px">${options}</select>
+            <input id="${com}-m" placeholder="Comment..." style="margin-bottom:8px">
+            <button id="${btn}-m" class="btn primary" style="width:100%">Update Status</button>
+          </div>
+        </div>
+      `);
+      
+      const updateFn=()=>updateStatus(r.id,document.getElementById(sel).value,document.getElementById(com).value.trim());
+      const updateFnM=()=>updateStatus(r.id,document.getElementById(sel+'-m').value,document.getElementById(com+'-m').value.trim());
+      
+      document.getElementById(btn).onclick=updateFn;
+      document.getElementById(btn+'-m').onclick=updateFnM;
     }
-  }catch(err){ 
-    UI.tbody.innerHTML=`<tr><td colspan="8">${err.message||String(err)}</td></tr>`; 
+    
+    if(rows.length===0){
+      UI.desktopTbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:40px;color:#6b7280">No requests found</td></tr>';
+      UI.mobileCards.innerHTML='<div style="padding:40px;text-align:center;color:#6b7280">No requests found</div>';
+    }
+  }catch(err){
+    UI.desktopTbody.innerHTML=`<tr><td colspan="8" style="color:#c00">${err.message||String(err)}</td></tr>`;
+    UI.mobileCards.innerHTML=`<div style="padding:20px;color:#c00">${err.message||String(err)}</div>`;
   }
 }
 
 async function updateStatus(id,next,comment){
   try{
     if(next==='Paid'){
-      const method=prompt('Payment method (e.g., Transfer, Cash, PayPal):','Transfer'); 
-      if(method===null) return;
+      const method=prompt('Payment method:','Transfer');
+      if(method===null)return;
       const reference=prompt('Reference / Transaction ID:','');
       await sb.from('payouts').insert({request_id:id,paid_by:me.id,method,reference});
     }
     
     await sb.from('requests').update({status:next}).eq('id',id);
-    if(comment) await sb.from('request_notes').insert({request_id:id,author_id:me.id,note:comment});
+    if(comment)await sb.from('request_notes').insert({request_id:id,author_id:me.id,note:comment});
     await sb.from('request_notes').insert({request_id:id,author_id:me.id,note:`Status -> ${next}`});
     await load();
-    await calcTotals(); // Recalculate totals after status change
-  }catch(err){ 
-    alert(err.message||String(err)); 
+    await calcStats();
+  }catch(err){
+    alert(err.message||String(err));
   }
 }
 
-/* Filters + export */
-$('btn-filter').onclick=async()=>{ await load(); await calcTotals(); };
-$('btn-clear').onclick=async()=>{ 
-  $('f-status').value=''; 
-  $('f-kind').value=''; 
-  $('f-from').value=''; 
-  $('f-to').value=''; 
-  await load(); 
-  await calcTotals();
+$('btn-filter').onclick=async()=>{await load();await calcStats();};
+$('btn-clear').onclick=async()=>{
+  $('f-status').value='';$('f-kind').value='';$('f-from').value='';$('f-to').value='';
+  await load();await calcStats();
 };
 
-$('btn-export').onclick=async()=>{ 
+$('btn-export').onclick=async()=>{
   const {data,error}=await sb.from('requests').select('*').order('created_at',{ascending:false});
-  if(error){ alert(error.message); return; }
+  if(error){alert(error.message);return;}
   
   const rows=[['created_at','user_id','kind','description','amount','currency','needed_by','status','updated_at','id']];
   (data||[]).forEach(r=>rows.push([r.created_at,r.user_id,r.kind,r.description||'',r.amount,r.currency,r.needed_by||'',r.status,r.updated_at,r.id]));
   
-  const csv=rows.map(r=>r.map(x=>{
-    const s=String(x==null?'':x);
-    return '"'+s.split('"').join('""')+'"';
-  }).join(',')).join('\n');
-  
-  const blob=new Blob([csv],{type:'text/csv'}); 
+  const csv=rows.map(r=>r.map(x=>'"'+String(x==null?'':x).split('"').join('""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); 
-  a.href=url; 
-  a.download='julinemart_requests.csv'; 
-  a.click(); 
-  URL.revokeObjectURL(url); 
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='julinemart_requests.csv';
+  a.click();
+  URL.revokeObjectURL(url);
 };
 
 console.log('Admin script loaded');
