@@ -327,6 +327,7 @@
             <th>Status</th>
             <th>Action</th>
             <th>Receipt</th>
+            <th>Delete</th>
           </tr>
         </thead>
         <tbody id="desktop-tbody"></tbody>
@@ -523,7 +524,7 @@ function escapeHtml(s){
 let LOAD_TOKEN=0;
 async function load(f=readFilters()){
   const token=++LOAD_TOKEN;
-  UI.desktopTbody.innerHTML='<tr><td colspan="8">Loading...</td></tr>';
+  UI.desktopTbody.innerHTML='<tr><td colspan="9">Loading...</td></tr>';
   UI.mobileCards.innerHTML='<div style="padding:20px;text-align:center;color:#6b7280">Loading...</div>';
   
   try{
@@ -554,7 +555,7 @@ async function load(f=readFilters()){
         }
       }
       
-      const sel=`sel-${r.id}`,com=`com-${r.id}`,btn=`btn-${r.id}`;
+      const sel=`sel-${r.id}`,com=`com-${r.id}`,btn=`btn-${r.id}`,delBtn=`del-${r.id}`;
       const options=['Pending','Approved','Declined','Paid'].map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('');
       const desc=escapeHtml(r.description||'');
       
@@ -575,6 +576,7 @@ async function load(f=readFilters()){
             </div>
           </td>
           <td>${link}</td>
+          <td><button id="${delBtn}" class="btn btn-sm btn-danger" title="Delete this request">Delete</button></td>
         </tr>
       `);
       
@@ -606,25 +608,64 @@ async function load(f=readFilters()){
           <div style="margin-top:12px">
             <select id="${sel}-m" style="margin-bottom:8px">${options}</select>
             <input id="${com}-m" placeholder="Comment..." style="margin-bottom:8px">
-            <button id="${btn}-m" class="btn primary" style="width:100%">Update Status</button>
+            <button id="${btn}-m" class="btn primary" style="width:100%;margin-bottom:8px">Update Status</button>
+            <button id="${delBtn}-m" class="btn btn-danger" style="width:100%">Delete Request</button>
           </div>
         </div>
       `);
       
       const updateFn=()=>updateStatus(r.id,document.getElementById(sel).value,document.getElementById(com).value.trim());
       const updateFnM=()=>updateStatus(r.id,document.getElementById(sel+'-m').value,document.getElementById(com+'-m').value.trim());
+      const deleteFn=()=>deleteRequest(r.id,staff,r.description);
       
       document.getElementById(btn).onclick=updateFn;
       document.getElementById(btn+'-m').onclick=updateFnM;
+      document.getElementById(delBtn).onclick=deleteFn;
+      document.getElementById(delBtn+'-m').onclick=deleteFn;
     }
     
     if(rows.length===0){
-      UI.desktopTbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:40px;color:#6b7280">No requests found</td></tr>';
+      UI.desktopTbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:40px;color:#6b7280">No requests found</td></tr>';
       UI.mobileCards.innerHTML='<div style="padding:40px;text-align:center;color:#6b7280">No requests found</div>';
     }
   }catch(err){
-    UI.desktopTbody.innerHTML=`<tr><td colspan="8" style="color:#c00">${err.message||String(err)}</td></tr>`;
+    UI.desktopTbody.innerHTML=`<tr><td colspan="9" style="color:#c00">${err.message||String(err)}</td></tr>`;
     UI.mobileCards.innerHTML=`<div style="padding:20px;color:#c00">${err.message||String(err)}</div>`;
+  }
+}
+
+async function deleteRequest(id,staffName,description){
+  const confirmMsg=`Are you sure you want to DELETE this request?\n\nStaff: ${staffName}\nDescription: ${description||'No description'}\n\nThis action CANNOT be undone!`;
+  
+  if(!confirm(confirmMsg))return;
+  
+  // Double confirmation for safety
+  const finalConfirm=confirm('FINAL CONFIRMATION: Delete this request permanently?');
+  if(!finalConfirm)return;
+  
+  try{
+    console.log('Deleting request:',id);
+    
+    // Delete related records first
+    const {error:notesErr}=await sb.from('request_notes').delete().eq('request_id',id);
+    if(notesErr)console.error('Error deleting notes:',notesErr);
+    
+    const {error:payoutsErr}=await sb.from('payouts').delete().eq('request_id',id);
+    if(payoutsErr)console.error('Error deleting payouts:',payoutsErr);
+    
+    // Delete the request
+    const {error:reqErr}=await sb.from('requests').delete().eq('id',id);
+    if(reqErr)throw reqErr;
+    
+    console.log('Request deleted successfully');
+    alert('Request deleted successfully!');
+    
+    // Reload data
+    await load();
+    await calcStats();
+  }catch(err){
+    console.error('Delete failed:',err);
+    alert('Failed to delete request: '+(err.message||String(err)));
   }
 }
 
