@@ -227,36 +227,56 @@ UI.form.addEventListener('submit', async (e) => {
 
     me = data.session.user;
     
-    // Check role
+    // Check role with timeout
     UI.msg.textContent = 'Checking admin role...';
     console.log('Checking role for:', me.id);
     
-    const roleQuery = sb
-      .from('profiles')
-      .select('role')
-      .eq('user_id', me.id)
-      .maybeSingle();
+    let prof = null;
+    let roleErr = null;
     
-    console.log('Executing role query...');
-    const { data: prof, error: roleErr } = await roleQuery;
-    console.log('Role check result:', prof, roleErr);
+    try {
+      console.log('Executing role query...');
+      
+      // Add timeout to the query
+      const queryPromise = sb
+        .from('profiles')
+        .select('role')
+        .eq('user_id', me.id)
+        .maybeSingle();
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Query timed out after 5 seconds')), 5000)
+      );
+      
+      const result = await Promise.race([queryPromise, timeoutPromise]);
+      prof = result.data;
+      roleErr = result.error;
+      
+      console.log('Role check result:', prof, roleErr);
+    } catch (queryError) {
+      console.error('Role query failed:', queryError);
+      roleErr = queryError;
+    }
     
     if (!prof && !roleErr) {
       console.warn('No profile found - creating default admin profile');
-      // Try to insert a profile
-      const { error: insertErr } = await sb.from('profiles').insert({
-        user_id: me.id,
-        email: me.email,
-        role: 'admin'
-      });
-      if (insertErr) {
-        console.error('Failed to create profile:', insertErr);
-        throw new Error('No profile exists and could not create one. Error: ' + insertErr.message);
+      try {
+        const { error: insertErr } = await sb.from('profiles').insert({
+          user_id: me.id,
+          email: me.email,
+          role: 'admin'
+        });
+        if (insertErr) {
+          console.error('Failed to create profile:', insertErr);
+          throw new Error('No profile exists and could not create one. Error: ' + insertErr.message);
+        }
+        const { data: newProf } = await sb.from('profiles').select('role').eq('user_id', me.id).maybeSingle();
+        console.log('Created and fetched new profile:', newProf);
+        prof = newProf;
+      } catch (insertError) {
+        console.error('Insert failed:', insertError);
+        throw new Error('Could not create profile: ' + insertError.message);
       }
-      // Fetch again
-      const { data: newProf } = await sb.from('profiles').select('role').eq('user_id', me.id).maybeSingle();
-      console.log('Created and fetched new profile:', newProf);
-      prof = newProf;
     }
     
     if (roleErr) {
