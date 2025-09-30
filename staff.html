@@ -6,37 +6,237 @@
 <title>JulineMart • Staff</title>
 <link rel="icon" href="logo.png">
 <style>
-  :root{--jm-primary:#08A045;--jm-border:#E7EAEE;}
-  *{box-sizing:border-box}
-  body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-  header{background:#0E141B;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+  :root{
+    --jm-primary:#08A045;
+    --jm-primary-light:#0bc252;
+    --jm-dark:#0E141B;
+    --jm-border:#E7EAEE;
+    --jm-bg:#F8F9FA;
+    --jm-card:#FFFFFF;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    background:var(--jm-bg);
+  }
+  header{
+    background:var(--jm-dark);
+    color:#fff;
+    padding:16px 20px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    position:sticky;
+    top:0;
+    z-index:100;
+    box-shadow:0 2px 8px rgba(0,0,0,0.1);
+  }
   .brand{display:flex;gap:10px;align-items:center}
-  .brand img{width:28px;height:28px;border-radius:6px}
-  .btn{cursor:pointer;padding:8px 10px;border-radius:8px;border:1px solid var(--jm-border);background:#fff}
-  .btn.primary{background:var(--jm-primary);color:#fff;border-color:transparent}
-  .btn[disabled]{opacity:.6;cursor:not-allowed}
-  main{max-width:1100px;margin:24px auto;padding:0 16px}
-  .card{background:#fff;border:1px solid var(--jm-border);border-radius:12px;padding:16px;margin-bottom:16px}
-  .row{display:flex;gap:8px;flex-wrap:wrap}
-  .row>*{flex:1 1 220px}
-  input,select,textarea{width:100%;padding:9px;border:1px solid #d8dbe0;border-radius:10px;font:inherit}
-  textarea{min-height:80px;resize:vertical}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
-  .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px}
-  .Pending{background:#fff3cd;border:1px solid #ffe69c}
-  .Approved{background:#d1e7dd;border:1px solid #a3cfbb}
-  .Declined{background:#f8d7da;border:1px solid #f1aeb5}
-  .Paid{background:#cff4fc;border:1px solid #9eeaf9}
+  .brand img{width:32px;height:32px;border-radius:8px}
+  .brand b{font-size:16px}
+  .user-info{display:flex;align-items:center;gap:12px}
+  .btn{
+    cursor:pointer;
+    padding:10px 16px;
+    border-radius:8px;
+    border:1px solid var(--jm-border);
+    background:#fff;
+    font:inherit;
+    transition:all 0.2s;
+    text-decoration:none;
+    display:inline-block;
+  }
+  .btn:hover{transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+  .btn.primary{
+    background:var(--jm-primary);
+    color:#fff;
+    border-color:transparent;
+  }
+  .btn.primary:hover{background:var(--jm-primary-light)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed;transform:none}
+  
+  main{max-width:1200px;margin:0 auto;padding:20px}
+  
+  .card{
+    background:var(--jm-card);
+    border-radius:12px;
+    padding:24px;
+    margin-bottom:20px;
+    box-shadow:0 1px 3px rgba(0,0,0,0.08);
+  }
+  .card h3{
+    margin-bottom:20px;
+    color:var(--jm-dark);
+    font-size:18px;
+  }
+  
+  /* Login Card */
+  .login-card{max-width:500px;margin:60px auto}
+  
+  /* Form Styles */
+  .form-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:16px;
+    margin-bottom:16px;
+  }
+  .form-group{margin-bottom:16px}
+  .form-group.full{grid-column:1/-1}
+  
+  label{
+    display:block;
+    font-size:13px;
+    font-weight:500;
+    color:#374151;
+    margin-bottom:6px;
+  }
+  input,select,textarea{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--jm-border);
+    border-radius:8px;
+    font:inherit;
+    transition:border-color 0.2s;
+  }
+  input:focus,select:focus,textarea:focus{
+    outline:none;
+    border-color:var(--jm-primary);
+    box-shadow:0 0 0 3px rgba(8,160,69,0.1);
+  }
+  textarea{
+    min-height:100px;
+    resize:vertical;
+  }
+  
+  /* Filter Section */
+  .filters-bar{
+    background:var(--jm-card);
+    padding:20px;
+    border-radius:12px;
+    margin-bottom:20px;
+    box-shadow:0 1px 3px rgba(0,0,0,0.08);
+  }
+  .filters-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:12px;
+    margin-bottom:12px;
+  }
+  .filter-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  
+  /* Request Cards */
+  .requests-grid{
+    display:grid;
+    gap:16px;
+  }
+  .request-card{
+    background:var(--jm-card);
+    border:1px solid var(--jm-border);
+    border-radius:12px;
+    padding:20px;
+    transition:all 0.2s;
+  }
+  .request-card:hover{
+    box-shadow:0 4px 12px rgba(0,0,0,0.1);
+    transform:translateY(-2px);
+  }
+  .request-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:start;
+    margin-bottom:16px;
+    padding-bottom:16px;
+    border-bottom:1px solid #f3f4f6;
+  }
+  .request-date{
+    font-size:13px;
+    color:#6b7280;
+  }
+  .request-body{
+    display:grid;
+    gap:12px;
+  }
+  .info-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:8px 0;
+  }
+  .info-label{
+    font-size:13px;
+    color:#6b7280;
+    font-weight:500;
+  }
+  .info-value{
+    font-size:14px;
+    color:var(--jm-dark);
+    text-align:right;
+  }
+  .amount-large{
+    font-size:20px;
+    font-weight:600;
+    color:var(--jm-primary);
+  }
+  
+  .pill{
+    display:inline-block;
+    padding:6px 12px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:500;
+  }
+  .Pending{background:#fef3c7;color:#92400e}
+  .Approved{background:#d1fae5;color:#065f46}
+  .Declined{background:#fee2e2;color:#991b1b}
+  .Paid{background:#dbeafe;color:#1e40af}
+  
+  .empty-state{
+    text-align:center;
+    padding:60px 20px;
+    color:#6b7280;
+  }
+  .empty-state svg{
+    width:64px;
+    height:64px;
+    margin:0 auto 16px;
+    opacity:0.3;
+  }
+  
   .hidden{display:none !important}
+  .message{
+    padding:12px;
+    border-radius:8px;
+    margin-top:12px;
+    font-size:13px;
+  }
+  .message.success{background:#d1fae5;color:#065f46}
+  .message.error{background:#fee2e2;color:#991b1b}
+  
+  /* Responsive */
+  @media (max-width:768px){
+    main{padding:12px}
+    .card{padding:16px}
+    .brand b{display:none}
+    header{padding:12px 16px}
+    .user-info span{font-size:13px}
+    .form-grid{grid-template-columns:1fr}
+    .filters-grid{grid-template-columns:1fr}
+    .filter-actions{flex-direction:column}
+    .filter-actions .btn{width:100%}
+  }
 </style>
 </head>
 <body>
 <header>
   <div class="brand">
-    <img src="logo.png" alt=""><b>JulineMart • Staff</b>
+    <img src="logo.png" alt="">
+    <b>JulineMart • Staff</b>
   </div>
-  <div>
+  <div class="user-info">
     <span id="whoami"></span>
     <button id="btn-signout" class="btn hidden" type="button">Sign out</button>
   </div>
@@ -44,83 +244,114 @@
 
 <main>
   <!-- Login/Register -->
-  <section id="auth" class="card">
+  <section id="auth" class="login-card card">
     <h3>Staff Access</h3>
     <form id="staff-form" novalidate>
-      <div class="row">
-        <div><label>Full Name</label><input id="fullname" type="text" placeholder="Your full name"></div>
-        <div><label>Email</label><input id="email" type="email" placeholder="you@julinemart.com" required></div>
-        <div><label>Password</label><input id="password" type="password" placeholder="Enter password" required></div>
+      <div class="form-group">
+        <label>Full Name</label>
+        <input id="fullname" type="text" placeholder="Your full name">
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-        <button id="btn-login" class="btn primary" type="submit">Log in</button>
+      <div class="form-group">
+        <label>Email</label>
+        <input id="email" type="email" placeholder="you@julinemart.com" required>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input id="password" type="password" placeholder="Enter password" required>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:20px">
+        <button class="btn primary" type="submit" style="flex:1">Log in</button>
         <button id="btn-register" class="btn" type="button">Register</button>
-        <a href="admin.html" class="btn" style="text-decoration:none">Go to Admin</a>
       </div>
-      <p id="signin-msg" style="color:#c00"></p>
+      <a href="admin.html" class="btn" style="width:100%;text-align:center;margin-top:8px">Go to Admin</a>
+      <p id="signin-msg" class="message hidden"></p>
     </form>
   </section>
 
-  <!-- New Request -->
+  <!-- New Request Form -->
   <section id="new-request" class="card hidden">
     <h3>New Request</h3>
     <form id="request-form" novalidate>
-      <div class="row">
-        <div>
+      <div class="form-grid">
+        <div class="form-group">
           <label>Type</label>
           <select id="kind">
             <option value="petty_cash">Petty Cash (advance)</option>
             <option value="reimbursement">Reimbursement</option>
           </select>
         </div>
-        <div><label>Amount</label><input id="amount" type="number" step="0.01" min="0" value="0.00"></div>
-        <div>
+        <div class="form-group">
+          <label>Amount</label>
+          <input id="amount" type="number" step="0.01" min="0" value="0.00">
+        </div>
+        <div class="form-group">
           <label>Currency</label>
           <select id="currency">
-            <option>GBP</option><option>USD</option><option>EUR</option><option>NGN</option><option>KES</option>
+            <option>GBP</option>
+            <option>USD</option>
+            <option>EUR</option>
+            <option>NGN</option>
+            <option>KES</option>
           </select>
         </div>
-        <div><label>Needed by (optional)</label><input id="needed_by" type="date"></div>
-      </div>
-      <div class="row">
-        <div style="flex:1 1 100%">
-          <label>Description / Purpose</label>
-          <textarea id="description" placeholder="What is this for?"></textarea>
+        <div class="form-group">
+          <label>Needed by (optional)</label>
+          <input id="needed_by" type="date">
         </div>
       </div>
-      <div class="row">
-        <div style="flex:1 1 100%">
-          <label>Receipts / Supporting docs (PNG/JPG/PDF - you can select multiple)</label>
-          <input id="files" type="file" multiple accept=".png,.jpg,.jpeg,.pdf">
-        </div>
+      
+      <div class="form-group full">
+        <label>Description / Purpose</label>
+        <textarea id="description" placeholder="What is this for?"></textarea>
       </div>
-      <div style="margin-top:10px">
-        <button id="btn-submit-request" class="btn primary" type="submit">Submit</button>
+      
+      <div class="form-group full">
+        <label>Receipts / Supporting docs (PNG/JPG/PDF)</label>
+        <input id="files" type="file" multiple accept=".png,.jpg,.jpeg,.pdf">
       </div>
-      <p id="request-msg" style="color:#0a0"></p>
+      
+      <button class="btn primary" type="submit">Submit Request</button>
+      <p id="request-msg" class="message hidden"></p>
     </form>
+  </section>
+
+  <!-- Filters -->
+  <section id="filters-section" class="filters-bar hidden">
+    <div class="filters-grid">
+      <div>
+        <label>Status</label>
+        <select id="mf-status">
+          <option value="">All Status</option>
+          <option>Pending</option>
+          <option>Approved</option>
+          <option>Declined</option>
+          <option>Paid</option>
+        </select>
+      </div>
+      <div>
+        <label>From Date</label>
+        <input id="mf-from" type="date">
+      </div>
+      <div>
+        <label>To Date</label>
+        <input id="mf-to" type="date">
+      </div>
+      <div>
+        <label>Search</label>
+        <input id="mf-search" type="search" placeholder="Search description...">
+      </div>
+    </div>
+    <div class="filter-actions">
+      <button id="mf-apply" class="btn primary">Apply Filters</button>
+      <button id="mf-clear" class="btn">Clear</button>
+      <button id="mf-refresh" class="btn">Refresh</button>
+    </div>
   </section>
 
   <!-- My Requests -->
   <section id="my-requests" class="card hidden">
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between">
-      <h3 style="margin:0">My Requests</h3>
-      <div class="row" style="margin:0;flex: 1 1 auto;align-items:center">
-        <div style="flex:0 0 180px"><select id="mf-status"><option value="">Status: All</option><option>Pending</option><option>Approved</option><option>Declined</option><option>Paid</option></select></div>
-        <div style="flex:0 0 150px"><input id="mf-from" type="date"></div>
-        <div style="flex:0 0 150px"><input id="mf-to" type="date"></div>
-        <div style="flex:1 1 240px"><input id="mf-search" type="search" placeholder="Search description..."></div>
-        <div style="flex:0 0 auto"><button id="mf-apply" class="btn" type="button">Apply</button></div>
-        <div style="flex:0 0 auto"><button id="mf-clear" class="btn" type="button">Clear</button></div>
-        <div style="flex:0 0 auto"><button id="mf-refresh" class="btn" type="button">Refresh</button></div>
-      </div>
-    </div>
-    <div style="margin-top:10px">
-      <table id="req-table">
-        <thead><tr><th>Date</th><th>Status</th><th>Amount</th><th>Comment</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
+    <h3>My Requests</h3>
+    <div id="requests-container" class="requests-grid"></div>
   </section>
 </main>
 
@@ -131,350 +362,311 @@ console.log('Staff page loaded');
 const sb = supabase.createClient(
   "https://hmguraxzebhspednbbav.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o",
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: false
-    }
-  }
+  {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}}
 );
 
 const $=(id)=>document.getElementById(id);
-const UI={auth:$('auth'), form:$('staff-form'), msg:$('signin-msg'),
-          who:$('whoami'), out:$('btn-signout'),
-          newReq:$('new-request'), my:$('my-requests'),
-          rForm:$('request-form'), rMsg:$('request-msg'),
-          tbody:document.querySelector('#req-table tbody')};
-let me=null;
-let myProfile=null;
+const UI={
+  auth:$('auth'),form:$('staff-form'),msg:$('signin-msg'),
+  who:$('whoami'),out:$('btn-signout'),
+  newReq:$('new-request'),filters:$('filters-section'),my:$('my-requests'),
+  rForm:$('request-form'),rMsg:$('request-msg'),
+  container:$('requests-container')
+};
+let me=null,myProfile=null;
 
 function setLoggedInUI(on){
-  UI.auth.classList.toggle('hidden', on);
-  UI.newReq.classList.toggle('hidden', !on);
-  UI.my.classList.toggle('hidden', !on);
-  UI.out.classList.toggle('hidden', !on);
+  UI.auth.classList.toggle('hidden',on);
+  UI.newReq.classList.toggle('hidden',!on);
+  UI.filters.classList.toggle('hidden',!on);
+  UI.my.classList.toggle('hidden',!on);
+  UI.out.classList.toggle('hidden',!on);
 }
 
-let isInitializing = false;
+function showMessage(el,text,type='error'){
+  el.textContent=text;
+  el.className='message '+(type==='success'?'success':'error');
+  el.classList.remove('hidden');
+  setTimeout(()=>el.classList.add('hidden'),5000);
+}
+
+let isInitializing=false;
 async function readSessionAndRender(){
-  if (isInitializing) {
-    console.log('Already initializing, skipping duplicate call');
-    return;
-  }
-  isInitializing = true;
+  if(isInitializing)return;
+  isInitializing=true;
   
-  try {
-    console.log('Reading session...');
+  try{
     const {data:{session}}=await sb.auth.getSession();
     me=session?.user||null;
     
-    if(!me){ 
-      console.log('No session found');
-      UI.who.textContent=''; 
-      setLoggedInUI(false); 
-      return; 
+    if(!me){
+      UI.who.textContent='';
+      setLoggedInUI(false);
+      return;
     }
     
-    console.log('Session found for:', me.email);
+    const {data:prof}=await sb.from('profiles').select('full_name,email').eq('user_id',me.id).maybeSingle();
+    myProfile=prof;
     
-    // Get profile with full name
-    const {data:prof} = await sb.from('profiles').select('full_name,email').eq('user_id',me.id).maybeSingle();
-    myProfile = prof;
-    
-    const displayName = (prof?.full_name && prof.full_name.trim()) || me.email;
-    UI.who.textContent = displayName;
-    console.log('Profile loaded:', displayName);
+    const displayName=(prof?.full_name&&prof.full_name.trim())||me.email;
+    UI.who.textContent=displayName;
     
     setLoggedInUI(true);
     await loadMyRequests();
-  } finally {
-    isInitializing = false;
+  }finally{
+    isInitializing=false;
   }
 }
 
-// Only initialize once on auth state change
-let hasInitialized = false;
-sb.auth.onAuthStateChange((event, session) => {
-  console.log('Auth state changed:', event);
-  if (event === 'SIGNED_IN' && !hasInitialized) {
-    hasInitialized = true;
+let hasInitialized=false;
+sb.auth.onAuthStateChange((event,session)=>{
+  console.log('Auth changed:',event);
+  if(event==='SIGNED_IN'&&!hasInitialized){
+    hasInitialized=true;
     readSessionAndRender();
-  } else if (event === 'SIGNED_OUT') {
-    hasInitialized = false;
+  }else if(event==='SIGNED_OUT'){
+    hasInitialized=false;
     setLoggedInUI(false);
   }
 });
-
-// Initial check
 readSessionAndRender();
 
 /* Login */
-const sMsg = $('signin-msg');
-let isLoggingIn = false;
-
-UI.form.addEventListener('submit', async (e) => {
+let isLoggingIn=false;
+UI.form.addEventListener('submit',async(e)=>{
   e.preventDefault();
+  if(isLoggingIn)return;
+  isLoggingIn=true;
   
-  if (isLoggingIn) {
-    console.log('Login already in progress');
-    return;
-  }
-  isLoggingIn = true;
+  showMessage(UI.msg,'Logging in...','success');
   
-  sMsg.style.color = '#666';
-  sMsg.textContent = 'Logging in...';
-  
-  try {
-    const email = $('email').value.trim();
-    const pw = $('password').value.trim();
-    
-    if (!email || !pw) { 
-      sMsg.style.color = '#c00';
-      sMsg.textContent = 'Enter email & password.'; 
-      return; 
+  try{
+    const email=$('email').value.trim();
+    const pw=$('password').value.trim();
+    if(!email||!pw){
+      showMessage(UI.msg,'Enter email & password.');
+      return;
     }
 
-    console.log('Attempting login for:', email);
-    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
-    
-    if (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
+    const {data,error}=await sb.auth.signInWithPassword({email,password:pw});
+    if(error)throw error;
 
-    console.log('Login successful');
-    
-    // Wait for session to stabilize
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    sMsg.style.color = '#0a0';
-    sMsg.textContent = 'Welcome!';
-    
-    // Trigger session read
-    hasInitialized = false;
+    await new Promise(r=>setTimeout(r,500));
+    showMessage(UI.msg,'Welcome!','success');
+    hasInitialized=false;
     await readSessionAndRender();
-    
-  } catch (err) {
-    console.error('Staff login failed:', err);
-    sMsg.style.color = '#c00';
-    
-    if (err.message?.includes('Invalid login credentials')) {
-      sMsg.textContent = 'Invalid email or password.';
-    } else {
-      sMsg.textContent = err.message || String(err);
-    }
-  } finally {
-    isLoggingIn = false;
+  }catch(err){
+    console.error('Login failed:',err);
+    showMessage(UI.msg,err.message?.includes('Invalid')?'Invalid email or password.':err.message||String(err));
+  }finally{
+    isLoggingIn=false;
   }
 });
 
 /* Register */
 $('btn-register').onclick=async(e)=>{
   e.preventDefault();
+  if(isLoggingIn)return;
+  isLoggingIn=true;
   
-  if (isLoggingIn) return;
-  isLoggingIn = true;
-  
-  UI.msg.style.color='#666';
-  UI.msg.textContent='Registering...';
+  showMessage(UI.msg,'Registering...','success');
   
   try{
     const fullname=$('fullname').value.trim();
     const email=$('email').value.trim();
     const pw=$('password').value.trim();
     
-    if(!email||!pw){ 
-      UI.msg.style.color='#c00'; 
-      UI.msg.textContent='Enter email & password.'; 
-      return; 
-    }
-    
-    console.log('Attempting registration for:', email);
-    const {data, error}=await sb.auth.signUp({
-      email,
-      password:pw,
-      options: {
-        emailRedirectTo: window.location.origin + '/staff.html',
-        data: {
-          full_name: fullname || email.split('@')[0]
-        }
-      }
-    });
-    
-    if(error) throw error;
-    console.log('Registration response:', data);
-    
-    // Wait for user to be created
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Create profile entry with full name
-    if(data.user?.id) {
-      const {error: profileErr} = await sb.from('profiles').upsert({
-        user_id: data.user.id,
-        email: email,
-        full_name: fullname || email.split('@')[0],
-        role: 'staff'
-      }, {
-        onConflict: 'user_id'
-      });
-      
-      if(profileErr) {
-        console.error('Profile creation error:', profileErr);
-      } else {
-        console.log('Profile created with full name');
-      }
-    }
-    
-    const {data:s}=await sb.auth.getSession();
-    
-    if(s?.session){ 
-      UI.msg.style.color='#0a0'; 
-      UI.msg.textContent='Registered & signed in.'; 
-      hasInitialized = false;
-      await readSessionAndRender();
-    } else { 
-      UI.msg.style.color='#0a0';
-      UI.msg.textContent='Registered. Please check email to confirm, then log in.'; 
-    }
-  }catch(err){ 
-    console.error(err); 
-    UI.msg.style.color='#c00';
-    UI.msg.textContent=(err&&err.message)||String(err); 
-  } finally {
-    isLoggingIn = false;
-  }
-};
-
-/* Sign out */
-UI.out.onclick=async()=>{ 
-  await sb.auth.signOut(); 
-  hasInitialized = false;
-  setLoggedInUI(false); 
-  location.reload(); 
-};
-
-/* Submit new request + receipts */
-UI.rForm.addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  UI.rMsg.style.color='#0a0'; 
-  UI.rMsg.textContent='Submitting...';
-  
-  try{
-    const rec={ 
-      kind:$('kind').value, 
-      amount: Number($('amount').value||0), 
-      currency:$('currency').value,
-      needed_by:$('needed_by').value||null, 
-      description:$('description').value.trim()||null, 
-      status:'Pending' 
-    };
-    
-    const {data:ins, error} = await sb.from('requests').insert(rec).select('id').single();
-    if(error) throw error;
-    const reqId = ins.id;
-
-    // Upload files
-    const files = $('files').files;
-    for (const f of files) {
-      const path = `${me.id}/${reqId}/${Date.now()}-${f.name}`;
-      const { error: upErr } = await sb.storage.from('receipts').upload(path, f, { upsert:false });
-      if (!upErr) await sb.from('request_notes').insert({ request_id:reqId, author_id:me.id, note:`receipt:${path}` });
-    }
-    
-    UI.rMsg.textContent='Request submitted.';
-    UI.rForm.reset(); 
-    $('amount').value='0.00';
-    await loadMyRequests();
-  }catch(err){ 
-    UI.rMsg.style.color='#c00'; 
-    UI.rMsg.textContent=(err&&err.message)||String(err); 
-  }
-});
-
-/* My requests list */
-function pill(s){return `<span class="pill ${s}">${s}</span>`;}
-function fmt(a,c){return `${c} ${Number(a||0).toFixed(2)}`;}
-
-function readMyFilters(){ 
-  return { 
-    status:$('mf-status').value||null, 
-    from:$('mf-from').value||null, 
-    to:$('mf-to').value||null, 
-    q:$('mf-search').value.trim()||null 
-  }; 
-}
-
-async function latestAdminReason(request_id){
-  const { data, error } = await sb
-    .from('request_notes')
-    .select('note,created_at')
-    .eq('request_id', request_id)
-    .not('note', 'ilike', 'receipt:%')
-    .not('note', 'ilike', 'Status ->%')
-    .order('created_at', { ascending:false })
-    .limit(1);
-  if (error) return '';
-  return (data && data[0]?.note) || '';
-}
-
-let LOAD_TOKEN=0;
-async function loadMyRequests(f=readMyFilters()){
-  if(!me){ UI.tbody.innerHTML=''; return; }
-  
-  const token=++LOAD_TOKEN;
-  UI.tbody.innerHTML='<tr><td colspan="4">Loading...</td></tr>';
-  
-  try{
-    let q=sb.from('requests').select('*').eq('user_id',me.id).order('created_at',{ascending:false});
-    if(f.status) q=q.eq('status',f.status);
-    if(f.from) q=q.gte('created_at',f.from+'T00:00:00Z');
-    if(f.to)   q=q.lte('created_at',f.to+'T23:59:59Z');
-    if(f.q)    q=q.ilike('description','%'+f.q+'%');
-    
-    const {data, error}=await q; 
-    if(error) throw error;
-    
-    // Check if this query is still current
-    if(token!==LOAD_TOKEN) {
-      console.log('Skipping stale query result');
+    if(!email||!pw){
+      showMessage(UI.msg,'Enter email & password.');
       return;
     }
     
-    UI.tbody.innerHTML='';
+    const {data,error}=await sb.auth.signUp({
+      email,password:pw,
+      options:{
+        emailRedirectTo:window.location.origin+'/staff.html',
+        data:{full_name:fullname||email.split('@')[0]}
+      }
+    });
     
-    for(const r of (data||[])){
-      const reason = await latestAdminReason(r.id);
-      UI.tbody.insertAdjacentHTML('beforeend', `
-        <tr>
-          <td>${new Date(r.created_at).toLocaleDateString()}</td>
-          <td>${pill(r.status)}</td>
-          <td>${fmt(r.amount,r.currency)}</td>
-          <td>${reason?reason:''}</td>
-        </tr>
+    if(error)throw error;
+    
+    await new Promise(r=>setTimeout(r,500));
+    
+    if(data.user?.id){
+      await sb.from('profiles').upsert({
+        user_id:data.user.id,
+        email:email,
+        full_name:fullname||email.split('@')[0],
+        role:'staff'
+      },{onConflict:'user_id'});
+    }
+    
+    const {data:s}=await sb.auth.getSession();
+    if(s?.session){
+      showMessage(UI.msg,'Registered & signed in!','success');
+      hasInitialized=false;
+      await readSessionAndRender();
+    }else{
+      showMessage(UI.msg,'Registered. Check email to confirm.','success');
+    }
+  }catch(err){
+    console.error(err);
+    showMessage(UI.msg,err.message||String(err));
+  }finally{
+    isLoggingIn=false;
+  }
+};
+
+UI.out.onclick=async()=>{
+  await sb.auth.signOut();
+  hasInitialized=false;
+  setLoggedInUI(false);
+  location.reload();
+};
+
+/* Submit request */
+UI.rForm.addEventListener('submit',async(e)=>{
+  e.preventDefault();
+  showMessage(UI.rMsg,'Submitting...','success');
+  
+  try{
+    const rec={
+      kind:$('kind').value,
+      amount:Number($('amount').value||0),
+      currency:$('currency').value,
+      needed_by:$('needed_by').value||null,
+      description:$('description').value.trim()||null,
+      status:'Pending',
+      user_id:me.id
+    };
+    
+    const {data:ins,error}=await sb.from('requests').insert(rec).select('id').single();
+    if(error)throw error;
+    const reqId=ins.id;
+
+    const files=$('files').files;
+    for(const f of files){
+      const path=`${me.id}/${reqId}/${Date.now()}-${f.name}`;
+      const {error:upErr}=await sb.storage.from('receipts').upload(path,f,{upsert:false});
+      if(!upErr)await sb.from('request_notes').insert({request_id:reqId,author_id:me.id,note:`receipt:${path}`});
+    }
+    
+    showMessage(UI.rMsg,'Request submitted successfully!','success');
+    UI.rForm.reset();
+    $('amount').value='0.00';
+    await loadMyRequests();
+  }catch(err){
+    console.error('Submit error:',err);
+    showMessage(UI.rMsg,err.message||String(err));
+  }
+});
+
+/* Load requests */
+function pill(s){return `<span class="pill ${s}">${s}</span>`;}
+function fmt(a,c){return `${c} ${Number(a||0).toFixed(2)}`;}
+
+function readFilters(){
+  return{
+    status:$('mf-status').value||null,
+    from:$('mf-from').value||null,
+    to:$('mf-to').value||null,
+    q:$('mf-search').value.trim()||null
+  };
+}
+
+async function latestAdminReason(rid){
+  const {data}=await sb.from('request_notes')
+    .select('note,created_at')
+    .eq('request_id',rid)
+    .not('note','ilike','receipt:%')
+    .not('note','ilike','Status ->%')
+    .order('created_at',{ascending:false})
+    .limit(1);
+  return(data&&data[0]?.note)||'';
+}
+
+let LOAD_TOKEN=0;
+async function loadMyRequests(f=readFilters()){
+  if(!me)return;
+  
+  const token=++LOAD_TOKEN;
+  UI.container.innerHTML='<div style="padding:40px;text-align:center;color:#6b7280">Loading...</div>';
+  
+  try{
+    let q=sb.from('requests').select('*').eq('user_id',me.id).order('created_at',{ascending:false});
+    if(f.status)q=q.eq('status',f.status);
+    if(f.from)q=q.gte('created_at',f.from+'T00:00:00Z');
+    if(f.to)q=q.lte('created_at',f.to+'T23:59:59Z');
+    if(f.q)q=q.ilike('description','%'+f.q+'%');
+    
+    const {data,error}=await q;
+    if(error)throw error;
+    if(token!==LOAD_TOKEN)return;
+    
+    UI.container.innerHTML='';
+    
+    if((data||[]).length===0){
+      UI.container.innerHTML=`
+        <div class="empty-state">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <p style="font-size:16px;margin-bottom:8px">No requests found</p>
+          <p style="font-size:13px">Submit a new request to get started</p>
+        </div>
+      `;
+      return;
+    }
+    
+    for(const r of data){
+      const reason=await latestAdminReason(r.id);
+      const desc=r.description||'No description';
+      
+      UI.container.insertAdjacentHTML('beforeend',`
+        <div class="request-card">
+          <div class="request-header">
+            <div>
+              <div class="request-date">${new Date(r.created_at).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'})}</div>
+              <div style="margin-top:4px;text-transform:capitalize;color:#374151;font-weight:500">${r.kind.replace('_',' ')}</div>
+            </div>
+            ${pill(r.status)}
+          </div>
+          <div class="request-body">
+            <div class="info-row">
+              <span class="info-label">Amount</span>
+              <span class="amount-large">${fmt(r.amount,r.currency)}</span>
+            </div>
+            <div class="info-row" style="align-items:start">
+              <span class="info-label">Description</span>
+              <span class="info-value" style="max-width:60%;text-align:right">${desc}</span>
+            </div>
+            ${reason?`
+              <div class="info-row" style="align-items:start;padding-top:12px;border-top:1px solid #f3f4f6">
+                <span class="info-label">Admin Comment</span>
+                <span class="info-value" style="max-width:60%;font-style:italic;color:#6b7280">${reason}</span>
+              </div>
+            `:''}
+          </div>
+        </div>
       `);
     }
-    
-    if((data||[]).length===0){ 
-      UI.tbody.innerHTML='<tr><td colspan="4">No requests yet.</td></tr>'; 
-    }
-  }catch(err){ 
-    if(token===LOAD_TOKEN) {
-      UI.tbody.innerHTML=`<tr><td colspan="4">${err.message||String(err)}</td></tr>`; 
+  }catch(err){
+    if(token===LOAD_TOKEN){
+      UI.container.innerHTML=`<div style="padding:40px;text-align:center;color:#991b1b">${err.message||String(err)}</div>`;
     }
   }
 }
 
-/* Filter events */
-$('mf-apply').onclick = ()=> loadMyRequests();
-$('mf-clear').onclick = ()=> { 
-  $('mf-status').value=''; 
-  $('mf-from').value=''; 
-  $('mf-to').value=''; 
-  $('mf-search').value=''; 
-  loadMyRequests(); 
+$('mf-apply').onclick=()=>loadMyRequests();
+$('mf-clear').onclick=()=>{
+  $('mf-status').value='';
+  $('mf-from').value='';
+  $('mf-to').value='';
+  $('mf-search').value='';
+  loadMyRequests();
 };
-$('mf-refresh').onclick= ()=> loadMyRequests();
+$('mf-refresh').onclick=()=>loadMyRequests();
 
 console.log('Staff script loaded');
 </script>
