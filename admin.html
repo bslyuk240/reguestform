@@ -227,9 +227,12 @@ UI.form.addEventListener('submit', async (e) => {
 
     me = data.session.user;
     
-    // Check role with timeout
+    // Wait for session to stabilize before querying
     UI.msg.textContent = 'Checking admin role...';
     console.log('Checking role for:', me.id);
+    
+    // Give the session time to propagate through Supabase's system
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     let prof = null;
     let roleErr = null;
@@ -237,7 +240,7 @@ UI.form.addEventListener('submit', async (e) => {
     try {
       console.log('Executing role query...');
       
-      // Add timeout to the query
+      // Query with reasonable timeout (increased from 5s to 10s)
       const queryPromise = sb
         .from('profiles')
         .select('role')
@@ -245,7 +248,7 @@ UI.form.addEventListener('submit', async (e) => {
         .maybeSingle();
       
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Query timed out after 5 seconds')), 5000)
+        setTimeout(() => reject(new Error('Query timed out after 10 seconds')), 10000)
       );
       
       const result = await Promise.race([queryPromise, timeoutPromise]);
@@ -259,24 +262,8 @@ UI.form.addEventListener('submit', async (e) => {
     }
     
     if (!prof && !roleErr) {
-      console.warn('No profile found - creating default admin profile');
-      try {
-        const { error: insertErr } = await sb.from('profiles').insert({
-          user_id: me.id,
-          email: me.email,
-          role: 'admin'
-        });
-        if (insertErr) {
-          console.error('Failed to create profile:', insertErr);
-          throw new Error('No profile exists and could not create one. Error: ' + insertErr.message);
-        }
-        const { data: newProf } = await sb.from('profiles').select('role').eq('user_id', me.id).maybeSingle();
-        console.log('Created and fetched new profile:', newProf);
-        prof = newProf;
-      } catch (insertError) {
-        console.error('Insert failed:', insertError);
-        throw new Error('Could not create profile: ' + insertError.message);
-      }
+      console.warn('No profile found for user');
+      throw new Error('No profile found. Please contact administrator to set up your account.');
     }
     
     if (roleErr) {
