@@ -48,6 +48,7 @@
     <h3>Staff Access</h3>
     <form id="staff-form" novalidate>
       <div class="row">
+        <div><label>Full Name</label><input id="fullname" type="text" placeholder="Your full name"></div>
         <div><label>Email</label><input id="email" type="email" placeholder="you@julinemart.com" required></div>
         <div><label>Password</label><input id="password" type="password" placeholder="Enter password" required></div>
       </div>
@@ -89,7 +90,7 @@
       </div>
       <div class="row">
         <div style="flex:1 1 100%">
-          <label>Receipts / Supporting docs (PNG/JPG/PDF — you can select multiple)</label>
+          <label>Receipts / Supporting docs (PNG/JPG/PDF - you can select multiple)</label>
           <input id="files" type="file" multiple accept=".png,.jpg,.jpeg,.pdf">
         </div>
       </div>
@@ -125,6 +126,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
+console.log('Staff page loaded');
+
 const sb = supabase.createClient(
   "https://hmguraxzebhspednbbav.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtZ3VyYXh6ZWJoc3BlZG5iYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNjM5OTEsImV4cCI6MjA3NDYzOTk5MX0.kEvWzQHbym23mIi92CJIJfMAwi5JpT0K5ZL5gFMok_o",
@@ -132,7 +135,7 @@ const sb = supabase.createClient(
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: false  // we’re not using magic-link redirects here
+      detectSessionInUrl: false
     }
   }
 );
@@ -144,6 +147,7 @@ const UI={auth:$('auth'), form:$('staff-form'), msg:$('signin-msg'),
           rForm:$('request-form'), rMsg:$('request-msg'),
           tbody:document.querySelector('#req-table tbody')};
 let me=null;
+let myProfile=null;
 
 function setLoggedInUI(on){
   UI.auth.classList.toggle('hidden', on);
@@ -152,172 +156,256 @@ function setLoggedInUI(on){
   UI.out.classList.toggle('hidden', !on);
 }
 
+let isInitializing = false;
 async function readSessionAndRender(){
-  const {data:{session}}=await sb.auth.getSession();
-  me=session?.user||null;
-  if(!me){ UI.who.textContent=''; setLoggedInUI(false); return; }
-  UI.who.textContent = me.email;
-  setLoggedInUI(true);
-  await loadMyRequests();
+  if (isInitializing) {
+    console.log('Already initializing, skipping duplicate call');
+    return;
+  }
+  isInitializing = true;
+  
+  try {
+    console.log('Reading session...');
+    const {data:{session}}=await sb.auth.getSession();
+    me=session?.user||null;
+    
+    if(!me){ 
+      console.log('No session found');
+      UI.who.textContent=''; 
+      setLoggedInUI(false); 
+      return; 
+    }
+    
+    console.log('Session found for:', me.email);
+    
+    // Get profile with full name
+    const {data:prof} = await sb.from('profiles').select('full_name,email').eq('user_id',me.id).maybeSingle();
+    myProfile = prof;
+    
+    const displayName = (prof?.full_name && prof.full_name.trim()) || me.email;
+    UI.who.textContent = displayName;
+    console.log('Profile loaded:', displayName);
+    
+    setLoggedInUI(true);
+    await loadMyRequests();
+  } finally {
+    isInitializing = false;
+  }
 }
-sb.auth.onAuthStateChange(readSessionAndRender); readSessionAndRender();
+
+// Only initialize once on auth state change
+let hasInitialized = false;
+sb.auth.onAuthStateChange((event, session) => {
+  console.log('Auth state changed:', event);
+  if (event === 'SIGNED_IN' && !hasInitialized) {
+    hasInitialized = true;
+    readSessionAndRender();
+  } else if (event === 'SIGNED_OUT') {
+    hasInitialized = false;
+    setLoggedInUI(false);
+  }
+});
+
+// Initial check
+readSessionAndRender();
 
 /* Login */
-const sMsg = document.getElementById('signin-msg');
-document.getElementById('staff-form').addEventListener('submit', async (e) => {
+const sMsg = $('signin-msg');
+let isLoggingIn = false;
+
+UI.form.addEventListener('submit', async (e) => {
   e.preventDefault();
+  
+  if (isLoggingIn) {
+    console.log('Login already in progress');
+    return;
+  }
+  isLoggingIn = true;
+  
   sMsg.style.color = '#666';
   sMsg.textContent = 'Logging in...';
   
   try {
-    const email = document.getElementById('email').value.trim();
-    const pw = document.getElementById('password').value.trim();
+    const email = $('email').value.trim();
+    const pw = $('password').value.trim();
     
-    if (!email || !pw) {
+    if (!email || !pw) { 
       sMsg.style.color = '#c00';
-      sMsg.textContent = 'Enter email & password.';
-      return;
+      sMsg.textContent = 'Enter email & password.'; 
+      return; 
     }
 
     console.log('Attempting login for:', email);
-
-    // Sign in
-    const { data, error } = await sb.auth.signInWithPassword({ 
-      email, 
-      password: pw 
-    });
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
     
     if (error) {
       console.error('Login error:', error);
       throw error;
     }
 
-    console.log('Login response:', data);
-
-    // Wait a moment for session to be persisted
+    console.log('Login successful');
+    
+    // Wait for session to stabilize
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Verify session exists
-    const { data: sessionCheck } = await sb.auth.getSession();
-    console.log('Session check:', sessionCheck);
-
-    if (!sessionCheck?.session) {
-      sMsg.style.color = '#c00';
-      sMsg.textContent = 'Login succeeded but session not created. Try clearing your browser cache and cookies, then reload.';
-      return;
-    }
-
-    // Success
-    me = sessionCheck.session.user;
-    UI.who.textContent = me.email;
     sMsg.style.color = '#0a0';
     sMsg.textContent = 'Welcome!';
     
-    setLoggedInUI(true);
-    await loadMyRequests();
+    // Trigger session read
+    hasInitialized = false;
+    await readSessionAndRender();
     
   } catch (err) {
     console.error('Staff login failed:', err);
     sMsg.style.color = '#c00';
     
-    // More helpful error messages
     if (err.message?.includes('Invalid login credentials')) {
       sMsg.textContent = 'Invalid email or password.';
-    } else if (err.message?.includes('Email not confirmed')) {
-      sMsg.textContent = 'Please verify your email first.';
     } else {
       sMsg.textContent = err.message || String(err);
     }
+  } finally {
+    isLoggingIn = false;
   }
 });
 
 /* Register */
-$('btn-register').onclick = async(e) => {
+$('btn-register').onclick=async(e)=>{
   e.preventDefault();
-  UI.msg.style.color = '#666';
-  UI.msg.textContent = 'Registering...';
   
-  try {
-    const email = $('email').value.trim();
-    const pw = $('password').value.trim();
+  if (isLoggingIn) return;
+  isLoggingIn = true;
+  
+  UI.msg.style.color='#666';
+  UI.msg.textContent='Registering...';
+  
+  try{
+    const fullname=$('fullname').value.trim();
+    const email=$('email').value.trim();
+    const pw=$('password').value.trim();
     
-    if (!email || !pw) {
-      UI.msg.style.color = '#c00';
-      UI.msg.textContent = 'Enter email & password.';
-      return;
+    if(!email||!pw){ 
+      UI.msg.style.color='#c00'; 
+      UI.msg.textContent='Enter email & password.'; 
+      return; 
     }
     
     console.log('Attempting registration for:', email);
-    
-    const { data, error } = await sb.auth.signUp({
+    const {data, error}=await sb.auth.signUp({
       email,
-      password: pw,
+      password:pw,
       options: {
-        emailRedirectTo: window.location.origin + '/staff.html'
+        emailRedirectTo: window.location.origin + '/staff.html',
+        data: {
+          full_name: fullname || email.split('@')[0]
+        }
       }
     });
     
-    if (error) throw error;
-    
+    if(error) throw error;
     console.log('Registration response:', data);
     
-    // Wait for session
+    // Wait for user to be created
     await new Promise(resolve => setTimeout(resolve, 500));
-    const { data: s } = await sb.auth.getSession();
     
-    if (s?.session) {
-      me = s.session.user;
-      UI.who.textContent = me.email;
-      UI.msg.style.color = '#0a0';
-      UI.msg.textContent = 'Registered & signed in.';
-      setLoggedInUI(true);
-      await readSessionAndRender();
-    } else {
-      UI.msg.style.color = '#0a0';
-      UI.msg.textContent = 'Registered. Please check your email to confirm, then log in.';
+    // Create profile entry with full name
+    if(data.user?.id) {
+      const {error: profileErr} = await sb.from('profiles').upsert({
+        user_id: data.user.id,
+        email: email,
+        full_name: fullname || email.split('@')[0],
+        role: 'staff'
+      }, {
+        onConflict: 'user_id'
+      });
+      
+      if(profileErr) {
+        console.error('Profile creation error:', profileErr);
+      } else {
+        console.log('Profile created with full name');
+      }
     }
-  } catch (err) {
-    console.error('Registration error:', err);
-    UI.msg.style.color = '#c00';
-    UI.msg.textContent = err.message || String(err);
+    
+    const {data:s}=await sb.auth.getSession();
+    
+    if(s?.session){ 
+      UI.msg.style.color='#0a0'; 
+      UI.msg.textContent='Registered & signed in.'; 
+      hasInitialized = false;
+      await readSessionAndRender();
+    } else { 
+      UI.msg.style.color='#0a0';
+      UI.msg.textContent='Registered. Please check email to confirm, then log in.'; 
+    }
+  }catch(err){ 
+    console.error(err); 
+    UI.msg.style.color='#c00';
+    UI.msg.textContent=(err&&err.message)||String(err); 
+  } finally {
+    isLoggingIn = false;
   }
 };
 
 /* Sign out */
-UI.out.onclick=async()=>{ await sb.auth.signOut(); setLoggedInUI(false); location.reload(); };
+UI.out.onclick=async()=>{ 
+  await sb.auth.signOut(); 
+  hasInitialized = false;
+  setLoggedInUI(false); 
+  location.reload(); 
+};
 
 /* Submit new request + receipts */
 UI.rForm.addEventListener('submit', async (e)=>{
   e.preventDefault();
-  UI.rMsg.style.color='#0a0'; UI.rMsg.textContent='Submitting…';
+  UI.rMsg.style.color='#0a0'; 
+  UI.rMsg.textContent='Submitting...';
+  
   try{
-    const rec={ kind:$('kind').value, amount: Number($('amount').value||0), currency:$('currency').value,
-                needed_by:$('needed_by').value||null, description:$('description').value.trim()||null, status:'Pending' };
+    const rec={ 
+      kind:$('kind').value, 
+      amount: Number($('amount').value||0), 
+      currency:$('currency').value,
+      needed_by:$('needed_by').value||null, 
+      description:$('description').value.trim()||null, 
+      status:'Pending' 
+    };
+    
     const {data:ins, error} = await sb.from('requests').insert(rec).select('id').single();
     if(error) throw error;
     const reqId = ins.id;
 
-    // upload files and store notes as "receipt:<path>"
+    // Upload files
     const files = $('files').files;
     for (const f of files) {
       const path = `${me.id}/${reqId}/${Date.now()}-${f.name}`;
       const { error: upErr } = await sb.storage.from('receipts').upload(path, f, { upsert:false });
       if (!upErr) await sb.from('request_notes').insert({ request_id:reqId, author_id:me.id, note:`receipt:${path}` });
     }
+    
     UI.rMsg.textContent='Request submitted.';
-    UI.rForm.reset(); $('amount').value='0.00';
+    UI.rForm.reset(); 
+    $('amount').value='0.00';
     await loadMyRequests();
-  }catch(err){ UI.rMsg.style.color='#c00'; UI.rMsg.textContent=(err&&err.message)||String(err); }
+  }catch(err){ 
+    UI.rMsg.style.color='#c00'; 
+    UI.rMsg.textContent=(err&&err.message)||String(err); 
+  }
 });
 
 /* My requests list */
 function pill(s){return `<span class="pill ${s}">${s}</span>`;}
 function fmt(a,c){return `${c} ${Number(a||0).toFixed(2)}`;}
 
-function readMyFilters(){ return { status:$('mf-status').value||null, from:$('mf-from').value||null, to:$('mf-to').value||null, q:$('mf-search').value.trim()||null }; }
+function readMyFilters(){ 
+  return { 
+    status:$('mf-status').value||null, 
+    from:$('mf-from').value||null, 
+    to:$('mf-to').value||null, 
+    q:$('mf-search').value.trim()||null 
+  }; 
+}
 
 async function latestAdminReason(request_id){
-  // pick latest note that is NOT "receipt:*" and NOT "Status -> *"
   const { data, error } = await sb
     .from('request_notes')
     .select('note,created_at')
@@ -333,17 +421,28 @@ async function latestAdminReason(request_id){
 let LOAD_TOKEN=0;
 async function loadMyRequests(f=readMyFilters()){
   if(!me){ UI.tbody.innerHTML=''; return; }
+  
   const token=++LOAD_TOKEN;
-  UI.tbody.innerHTML='<tr><td colspan="4">Loading…</td></tr>';
+  UI.tbody.innerHTML='<tr><td colspan="4">Loading...</td></tr>';
+  
   try{
     let q=sb.from('requests').select('*').eq('user_id',me.id).order('created_at',{ascending:false});
     if(f.status) q=q.eq('status',f.status);
     if(f.from) q=q.gte('created_at',f.from+'T00:00:00Z');
     if(f.to)   q=q.lte('created_at',f.to+'T23:59:59Z');
     if(f.q)    q=q.ilike('description','%'+f.q+'%');
-    const {data, error}=await q; if(error) throw error;
-    if(token!==LOAD_TOKEN) return;
+    
+    const {data, error}=await q; 
+    if(error) throw error;
+    
+    // Check if this query is still current
+    if(token!==LOAD_TOKEN) {
+      console.log('Skipping stale query result');
+      return;
+    }
+    
     UI.tbody.innerHTML='';
+    
     for(const r of (data||[])){
       const reason = await latestAdminReason(r.id);
       UI.tbody.insertAdjacentHTML('beforeend', `
@@ -355,14 +454,29 @@ async function loadMyRequests(f=readMyFilters()){
         </tr>
       `);
     }
-    if((data||[]).length===0){ UI.tbody.innerHTML='<tr><td colspan="4">No requests yet.</td></tr>'; }
-  }catch(err){ UI.tbody.innerHTML=`<tr><td colspan="4">${err.message||String(err)}</td></tr>`; }
+    
+    if((data||[]).length===0){ 
+      UI.tbody.innerHTML='<tr><td colspan="4">No requests yet.</td></tr>'; 
+    }
+  }catch(err){ 
+    if(token===LOAD_TOKEN) {
+      UI.tbody.innerHTML=`<tr><td colspan="4">${err.message||String(err)}</td></tr>`; 
+    }
+  }
 }
 
-/* filter events */
+/* Filter events */
 $('mf-apply').onclick = ()=> loadMyRequests();
-$('mf-clear').onclick  = ()=> { $('mf-status').value=''; $('mf-from').value=''; $('mf-to').value=''; $('mf-search').value=''; loadMyRequests(); };
+$('mf-clear').onclick = ()=> { 
+  $('mf-status').value=''; 
+  $('mf-from').value=''; 
+  $('mf-to').value=''; 
+  $('mf-search').value=''; 
+  loadMyRequests(); 
+};
 $('mf-refresh').onclick= ()=> loadMyRequests();
+
+console.log('Staff script loaded');
 </script>
 </body>
 </html>
