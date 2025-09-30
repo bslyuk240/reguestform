@@ -231,15 +231,36 @@ UI.form.addEventListener('submit', async (e) => {
     UI.msg.textContent = 'Checking admin role...';
     console.log('Checking role for:', me.id);
     
-    const { data: prof, error: roleErr } = await sb
+    const roleQuery = sb
       .from('profiles')
       .select('role')
       .eq('user_id', me.id)
       .maybeSingle();
     
+    console.log('Executing role query...');
+    const { data: prof, error: roleErr } = await roleQuery;
     console.log('Role check result:', prof, roleErr);
     
+    if (!prof && !roleErr) {
+      console.warn('No profile found - creating default admin profile');
+      // Try to insert a profile
+      const { error: insertErr } = await sb.from('profiles').insert({
+        user_id: me.id,
+        email: me.email,
+        role: 'admin'
+      });
+      if (insertErr) {
+        console.error('Failed to create profile:', insertErr);
+        throw new Error('No profile exists and could not create one. Error: ' + insertErr.message);
+      }
+      // Fetch again
+      const { data: newProf } = await sb.from('profiles').select('role').eq('user_id', me.id).maybeSingle();
+      console.log('Created and fetched new profile:', newProf);
+      prof = newProf;
+    }
+    
     if (roleErr) {
+      console.error('Role query error:', roleErr);
       throw new Error('Role check failed: ' + roleErr.message);
     }
     
