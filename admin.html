@@ -167,8 +167,16 @@ async function init(){
     }
 
     console.log('Admin access granted');
+    
+    // Get and display admin's full name
+    const {data:adminProf} = await sb.from('profiles').select('full_name,email').eq('user_id',me.id).maybeSingle();
+    const displayName = (adminProf?.full_name && adminProf.full_name.trim()) || me.email;
+    UI.who.textContent = displayName;
+    console.log('Admin profile loaded:', displayName);
+    
     showAdminUI(true);
-    await load(); 
+    await load();
+    await calcTotals(); 
   } catch(err) {
     console.error('Init error:', err);
     UI.msg.textContent = 'Error: ' + (err.message || String(err));
@@ -280,12 +288,12 @@ UI.form.addEventListener('submit', async (e) => {
     }
 
     // Success
-    UI.who.textContent = me.email;
+    UI.who.textContent = me.email; // Will be updated in init()
     UI.msg.style.color = '#0a0';
     UI.msg.textContent = 'Welcome, admin.';
     
     showAdminUI(true);
-    await load();
+    await init(); // This will load name, data, and totals
     
   } catch (err) {
     console.error('Admin login failed:', err);
@@ -417,13 +425,14 @@ async function updateStatus(id,next,comment){
 }
 
 /* Filters + export */
-$('btn-filter').onclick=()=>load();
-$('btn-clear').onclick=()=>{ 
+$('btn-filter').onclick=async()=>{ await load(); await calcTotals(); };
+$('btn-clear').onclick=async()=>{ 
   $('f-status').value=''; 
   $('f-kind').value=''; 
   $('f-from').value=''; 
   $('f-to').value=''; 
-  load(); 
+  await load(); 
+  await calcTotals();
 };
 
 $('btn-export').onclick=async()=>{ 
