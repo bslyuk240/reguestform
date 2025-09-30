@@ -123,6 +123,61 @@ function showAdminUI(show){
   UI.out.classList.toggle('hidden',!show); 
 }
 
+/* Data */
+function readFilters(){ 
+  return { 
+    status:$('f-status').value||null, 
+    kind:$('f-kind').value||null, 
+    from:$('f-from').value||null, 
+    to:$('f-to').value||null 
+  }; 
+}
+
+async function fetchRequests(f={}){ 
+  let q=sb.from('requests').select('*').order('created_at',{ascending:false});
+  if(f.status) q=q.eq('status',f.status); 
+  if(f.kind) q=q.eq('kind',f.kind);
+  if(f.from) q=q.gte('created_at',f.from+'T00:00:00Z'); 
+  if(f.to) q=q.lte('created_at',f.to+'T23:59:59Z');
+  const {data,error}=await q; 
+  if(error) throw error; 
+  return data||[]; 
+}
+
+async function calcTotals(){
+  const f=readFilters();
+  let q=sb.from('requests').select('amount,currency').eq('status','Paid');
+  if(f.from) q=q.gte('created_at',f.from+'T00:00:00Z');
+  if(f.to)   q=q.lte('created_at',f.to+'T23:59:59Z');
+  const {data,error}=await q; 
+  if(error){ 
+    console.error('Totals calculation error:', error);
+    UI.totals.textContent='Totals: error'; 
+    return; 
+  }
+  
+  console.log('Calculating totals from data:', data);
+  
+  // Calculate totals by currency
+  const totalsByCurrency = {};
+  for (const row of (data || [])) {
+    const currency = (row.currency || 'UNK').trim() || 'UNK';
+    const amount = Number(row.amount) || 0;
+    totalsByCurrency[currency] = (totalsByCurrency[currency] || 0) + amount;
+  }
+  
+  // Format display
+  const entries = Object.entries(totalsByCurrency);
+  if (entries.length === 0) {
+    UI.totals.textContent = 'Totals: 0';
+  } else {
+    const parts = entries.map(([currency, sum]) => `${currency} ${sum.toFixed(2)}`);
+    UI.totals.textContent = `Totals: ${parts.join(' • ')}`;
+  }
+  
+  console.log('Totals displayed:', UI.totals.textContent);
+}
+
 async function init(){
   console.log('Init called');
   try {
@@ -341,27 +396,6 @@ function escapeHtml(s){
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-/* Data */
-function readFilters(){ 
-  return { 
-    status:$('f-status').value||null, 
-    kind:$('f-kind').value||null, 
-    from:$('f-from').value||null, 
-    to:$('f-to').value||null 
-  }; 
-}
-
-async function fetchRequests(f={}){ 
-  let q=sb.from('requests').select('*').order('created_at',{ascending:false});
-  if(f.status) q=q.eq('status',f.status); 
-  if(f.kind) q=q.eq('kind',f.kind);
-  if(f.from) q=q.gte('created_at',f.from+'T00:00:00Z'); 
-  if(f.to) q=q.lte('created_at',f.to+'T23:59:59Z');
-  const {data,error}=await q; 
-  if(error) throw error; 
-  return data||[]; 
-}
-
 let LOAD_TOKEN=0;
 async function load(f=readFilters()){
   const token=++LOAD_TOKEN; 
@@ -419,6 +453,7 @@ async function updateStatus(id,next,comment){
     if(comment) await sb.from('request_notes').insert({request_id:id,author_id:me.id,note:comment});
     await sb.from('request_notes').insert({request_id:id,author_id:me.id,note:`Status -> ${next}`});
     await load();
+    await calcTotals(); // Recalculate totals after status change
   }catch(err){ 
     alert(err.message||String(err)); 
   }
