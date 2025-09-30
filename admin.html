@@ -63,11 +63,9 @@
     box-shadow:0 1px 3px rgba(0,0,0,0.08);
   }
   
-  /* Login Card */
   .login-card{max-width:500px;margin:60px auto}
   .login-card h3{margin-bottom:20px;color:var(--jm-dark)}
   
-  /* Stats Bar */
   .stats-bar{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
@@ -93,7 +91,6 @@
     color:var(--jm-dark);
   }
   
-  /* Filters */
   .filters-section{
     background:var(--jm-card);
     padding:20px;
@@ -133,7 +130,6 @@
     margin-bottom:6px;
   }
   
-  /* Responsive Table */
   .table-container{
     overflow-x:auto;
     -webkit-overflow-scrolling:touch;
@@ -173,7 +169,6 @@
   .Declined{background:#fee2e2;color:#991b1b}
   .Paid{background:#dbeafe;color:#1e40af}
   
-  /* Action Controls */
   .action-row{
     display:flex;
     gap:8px;
@@ -184,7 +179,6 @@
   .action-row input{flex:2;min-width:180px}
   .action-row .btn{flex:0 0 auto;white-space:nowrap}
   
-  /* Mobile Cards - Hidden by default */
   .mobile-cards{display:none}
   .request-card{
     background:var(--jm-card);
@@ -212,7 +206,6 @@
   .hidden{display:none !important}
   .foot{font-size:12px;color:#6b7280;margin-top:8px}
   
-  /* Responsive */
   @media (max-width:768px){
     main{padding:12px}
     .card{padding:16px}
@@ -247,7 +240,6 @@
 </header>
 
 <main>
-  <!-- Login -->
   <section id="auth" class="login-card card">
     <h3>Admin Sign-in</h3>
     <form id="admin-form" novalidate>
@@ -267,7 +259,6 @@
     </form>
   </section>
 
-  <!-- Stats -->
   <div id="stats-section" class="stats-bar hidden">
     <div class="stat-card">
       <div class="stat-label">Total Paid</div>
@@ -287,7 +278,6 @@
     </div>
   </div>
 
-  <!-- Filters -->
   <section id="filters-section" class="filters-section hidden">
     <div class="filters-grid">
       <div>
@@ -324,7 +314,6 @@
     </div>
   </section>
 
-  <!-- Desktop Table -->
   <section id="table-section" class="card hidden">
     <div class="table-container">
       <table>
@@ -345,7 +334,6 @@
     </div>
   </section>
 
-  <!-- Mobile Cards -->
   <div id="mobile-cards" class="mobile-cards hidden"></div>
 </main>
 
@@ -470,7 +458,6 @@ sb.auth.onAuthStateChange((event,session)=>{
 });
 init();
 
-/* Login */
 UI.form.addEventListener('submit',async(e)=>{
   e.preventDefault();
   isLoggingIn=true;
@@ -501,14 +488,26 @@ UI.out.onclick=async()=>{
   try{await sb.auth.signOut();}finally{showAdminUI(false);location.href='staff.html';}
 };
 
-/* Helpers */
 function pill(s){return `<span class="pill ${s}">${s}</span>`;}
 function fmt(a,c){return `${c} ${Number(a||0).toFixed(2)}`;}
+
 async function signedUrl(path){
   if(!path)return'';
-  const {data}=await sb.storage.from('receipts').createSignedUrl(path,600);
-  return data?.signedUrl||'';
+  try{
+    console.log('Creating signed URL for path:',path);
+    const {data,error}=await sb.storage.from('receipts').createSignedUrl(path,3600);
+    if(error){
+      console.error('Error creating signed URL:',error);
+      return '';
+    }
+    console.log('Signed URL created successfully');
+    return data?.signedUrl||'';
+  }catch(err){
+    console.error('Exception creating signed URL:',err);
+    return '';
+  }
 }
+
 const nameCache=new Map();
 async function nameFor(uid){
   if(nameCache.has(uid))return nameCache.get(uid);
@@ -536,9 +535,24 @@ async function load(f=readFilters()){
     
     for(const r of rows){
       const staff=await nameFor(r.user_id);
+      
+      // Get receipt from request_notes
       const {data:notes}=await sb.from('request_notes').select('note').eq('request_id',r.id);
-      const rec=(notes||[]).find(n=>typeof n.note==='string'&&n.note.startsWith('receipt:'));
-      const link=rec?`<a target="_blank" href="${await signedUrl(rec.note.replace('receipt:',''))}" style="color:var(--jm-primary)">View</a>`:'—';
+      console.log('Notes for request',r.id,':',notes);
+      
+      const receiptNote=(notes||[]).find(n=>typeof n.note==='string'&&n.note.startsWith('receipt:'));
+      
+      let link='—';
+      if(receiptNote){
+        const path=receiptNote.note.replace('receipt:','');
+        console.log('Found receipt path:',path);
+        const url=await signedUrl(path);
+        if(url){
+          link=`<a target="_blank" href="${url}" style="color:var(--jm-primary);font-weight:500">View</a>`;
+        }else{
+          link='<span style="color:#991b1b;font-size:11px">Error loading</span>';
+        }
+      }
       
       const sel=`sel-${r.id}`,com=`com-${r.id}`,btn=`btn-${r.id}`;
       const options=['Pending','Approved','Declined','Paid'].map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('');
@@ -587,7 +601,7 @@ async function load(f=readFilters()){
               <span class="info-label">Description</span>
               <span class="info-value">${desc}</span>
             </div>
-            ${rec?`<div class="info-row"><span class="info-label">Receipt</span><span class="info-value">${link}</span></div>`:''}
+            ${link!=='—'?`<div class="info-row"><span class="info-label">Receipt</span><span class="info-value">${link}</span></div>`:''}
           </div>
           <div style="margin-top:12px">
             <select id="${sel}-m" style="margin-bottom:8px">${options}</select>
